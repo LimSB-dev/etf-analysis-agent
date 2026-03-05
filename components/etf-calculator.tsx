@@ -2,10 +2,11 @@
 
 import type React from "react"
 import { useState, useRef } from "react"
+import { useTranslations } from "next-intl"
 import { Calculator, Info, TrendingUp, TrendingDown, Minus, RefreshCw, ChevronDown, Globe } from "lucide-react"
 import { fetchMarketData } from "@/app/actions"
 import { ETF_OPTIONS, type EtfOption } from "@/lib/etf-options"
-import { translations, type Locale } from "@/lib/i18n"
+import { useLocaleState } from "@/components/i18n-provider"
 
 type CalculationResult = {
   qqqReturn: number
@@ -16,14 +17,11 @@ type CalculationResult = {
 }
 
 export function EtfCalculator() {
-  // Form State
-  const [locale, setLocale] = useState<Locale>("ko")
-  const t = translations[locale]
+  const t = useTranslations()
+  const { locale, setLocale } = useLocaleState()
   const [isLoading, setIsLoading] = useState(false)
-  
-  // Page Title (dynamic based on locale)
-  const pageTitle = t.pageTitle
-  const pageDescription = t.pageDescription
+  const pageTitle = t("pageTitle")
+  const pageDescription = t("pageDescription")
   const [selectedEtf, setSelectedEtf] = useState<EtfOption>(ETF_OPTIONS[0])
   const [inputs, setInputs] = useState({
     etfPrev: "",
@@ -65,7 +63,7 @@ export function EtfCalculator() {
       const data = await fetchMarketData(selectedEtf.id)
 
       if (data.etf.price === 0 || data.index.price === 0 || data.fx.price === 0) {
-        alert(t.someDataMissing)
+        alert(t("someDataMissing"))
       }
 
       const newInputs = {
@@ -86,7 +84,7 @@ export function EtfCalculator() {
       }
     } catch (error) {
       console.error("Failed to fetch data", error)
-      alert(t.fetchFailed)
+      alert(t("fetchFailed"))
     } finally {
       setIsLoading(false)
     }
@@ -149,7 +147,7 @@ export function EtfCalculator() {
   const calculate = (e: React.FormEvent) => {
     e.preventDefault()
     if (!performCalculation()) {
-      alert(t.invalidInput)
+      alert(t("invalidInput"))
     }
   }
 
@@ -189,7 +187,7 @@ export function EtfCalculator() {
           <form onSubmit={calculate} className="space-y-6">
             <div className="flex flex-col gap-4 mb-4">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t.marketDataInputs}</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t("marketDataInputs")}</h2>
                 <button
                   type="button"
                   onClick={handleFetchData}
@@ -197,7 +195,7 @@ export function EtfCalculator() {
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-                  {isLoading ? t.fetchingData : t.autoFetchPrices}
+                  {isLoading ? t("fetchingData") : t("autoFetchPrices")}
                 </button>
               </div>
             </div>
@@ -205,7 +203,7 @@ export function EtfCalculator() {
             {/* ETF Selector */}
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t.selectEtf}
+                {t("selectEtf")}
               </label>
               <div className="relative">
                 <select
@@ -213,21 +211,21 @@ export function EtfCalculator() {
                   onChange={handleEtfChange}
                   className="w-full appearance-none rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-4 py-3 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 >
-                  <optgroup label={t.nasdaq100Group}>
+                  <optgroup label={t("nasdaq100Group")}>
                     {ETF_OPTIONS.filter((e) => e.indexSymbol === "QQQ.O").map((etf) => (
                       <option key={etf.id} value={etf.id}>
                         {etf.name} ({etf.code})
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label={t.sp500Group}>
+                  <optgroup label={t("sp500Group")}>
                     {ETF_OPTIONS.filter((e) => e.indexSymbol === "SPY").map((etf) => (
                       <option key={etf.id} value={etf.id}>
                         {etf.name} ({etf.code})
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label={t.semiconductorGroup}>
+                  <optgroup label={t("semiconductorGroup")}>
                     {ETF_OPTIONS.filter((e) => e.indexSymbol === "SOXX.O").map((etf) => (
                       <option key={etf.id} value={etf.id}>
                         {etf.name} ({etf.code})
@@ -238,7 +236,7 @@ export function EtfCalculator() {
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                {t.baseIndex}: <span className="font-medium text-gray-700 dark:text-gray-300">{selectedEtf.indexName}</span>
+                {t("baseIndex")}: <span className="font-medium text-gray-700 dark:text-gray-300">{selectedEtf.indexName}</span>
               </p>
             </div>
 
@@ -253,7 +251,7 @@ export function EtfCalculator() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t.prevClose} (ETF_prev)
+                      {t("prevClose")} (ETF_prev)
                     </label>
                     <input
                       type="number"
@@ -268,7 +266,7 @@ export function EtfCalculator() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t.currentPrice} (ETF_current)
+                      {t("currentPrice")} (ETF_current)
                     </label>
                     <input
                       type="number"
@@ -294,7 +292,7 @@ export function EtfCalculator() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t.prevClose} (Index_prev)
+                      {t("prevClose")} (Index_prev)
                     </label>
                     <input
                       type="number"
@@ -309,7 +307,7 @@ export function EtfCalculator() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t.lastClose} (Index_after)
+                      {t("lastClose")} (Index_after)
                     </label>
                     <input
                       type="number"
@@ -329,13 +327,13 @@ export function EtfCalculator() {
               <div className="space-y-4">
                 <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
                   <span className="w-2 h-2 rounded-full bg-green-500 mt-2"></span>
-                  {t.exchangeRate} <br />
+                  {t("exchangeRate")} <br />
                   (KRW/USD)
                 </h3>
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t.prevRate} (FX_prev)
+                      {t("prevRate")} (FX_prev)
                     </label>
                     <input
                       type="number"
@@ -350,7 +348,7 @@ export function EtfCalculator() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t.currentRate} (FX_now)
+                      {t("currentRate")} (FX_now)
                     </label>
                     <input
                       type="number"
@@ -373,7 +371,7 @@ export function EtfCalculator() {
                 className="inline-flex items-center justify-center gap-2 rounded-md bg-gray-900 px-8 py-3 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:bg-gray-50 dark:text-gray-900 dark:hover:bg-gray-200 w-full md:w-auto transition-colors"
               >
                 <Calculator className="w-4 h-4" />
-                {t.calculateFairValue}
+                {t("calculateFairValue")}
               </button>
             </div>
           </form>
@@ -409,18 +407,18 @@ export function EtfCalculator() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {t.signal}: {result.signal}
+                  {t("signal")}: {result.signal}
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400">
-                  {result.signal === "BUY" && t.buySignalDesc}
-                  {result.signal === "SELL" && t.sellSignalDesc}
-                  {result.signal === "HOLD" && t.holdSignalDesc}
+                  {result.signal === "BUY" && t("buySignalDesc")}
+                  {result.signal === "SELL" && t("sellSignalDesc")}
+                  {result.signal === "HOLD" && t("holdSignalDesc")}
                 </p>
               </div>
             </div>
             <div className="text-center md:text-right">
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                {t.currentPremium}
+                {t("currentPremium")}
               </div>
               <div
                 className={`text-3xl font-bold ${
@@ -440,14 +438,14 @@ export function EtfCalculator() {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Calculator className="w-5 h-5 text-gray-500" />
-                {t.fairValueCalculation}
+                {t("fairValueCalculation")}
               </h3>
 
               <div className="space-y-4 text-sm">
                 {/* Index Step */}
                 <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
                   <div className="flex justify-between text-gray-500 dark:text-gray-400 mb-2">
-                    <span>1. {selectedEtf.indexName.split(" ")[0]} {t.indexReturn}</span>
+                    <span>1. {selectedEtf.indexName.split(" ")[0]} {t("indexReturn")}</span>
                     <span>{fmtPct(result.qqqReturn)}</span>
                   </div>
                   <div className="font-mono text-xs text-gray-600 dark:text-gray-300">
@@ -459,7 +457,7 @@ export function EtfCalculator() {
                 {/* FX Step */}
                 <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
                   <div className="flex justify-between text-gray-500 dark:text-gray-400 mb-2">
-                    <span>2. {t.fxReturn}</span>
+                    <span>2. {t("fxReturn")}</span>
                     <span>{fmtPct(result.fxReturn)}</span>
                   </div>
                   <div className="font-mono text-xs text-gray-600 dark:text-gray-300">
@@ -471,7 +469,7 @@ export function EtfCalculator() {
                 {/* Final Formula */}
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 p-4 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold text-blue-900 dark:text-blue-100">3. {t.fairValue}</span>
+                    <span className="font-semibold text-blue-900 dark:text-blue-100">3. {t("fairValue")}</span>
                     <span className="font-bold text-lg text-blue-700 dark:text-blue-300">
                       {fmtKrw(Math.round(result.etfFair))}
                     </span>
@@ -487,24 +485,24 @@ export function EtfCalculator() {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Info className="w-5 h-5 text-gray-500" />
-                {t.analysisSummary}
+                {t("analysisSummary")}
               </h3>
 
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
                 <div className="p-4 flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">{t.fairValue}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t("fairValue")}</span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {fmtKrw(Math.round(result.etfFair))}
                   </span>
                 </div>
                 <div className="p-4 flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">{t.currentMarketPrice}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t("currentMarketPrice")}</span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {fmtKrw(Number.parseFloat(inputs.etfCurrent))}
                   </span>
                 </div>
                 <div className="p-4 flex justify-between items-center bg-gray-50 dark:bg-gray-800/30">
-                  <span className="text-gray-600 dark:text-gray-400">{t.gap}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t("gap")}</span>
                   <span
                     className={`font-semibold ${
                       result.etfFair > Number.parseFloat(inputs.etfCurrent)
@@ -518,26 +516,38 @@ export function EtfCalculator() {
               </div>
 
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-sm text-gray-600 dark:text-gray-300">
-                <h4 className="font-semibold mb-2 text-gray-900 dark:text-gray-100">{t.marketInsight}</h4>
+                <h4 className="font-semibold mb-2 text-gray-900 dark:text-gray-100">{t("marketInsight")}</h4>
                 <ul className="list-disc list-inside space-y-1">
                   <li>
-                    {selectedEtf.indexName.split(" ")[0]} {t.moved}{" "}
+                    {selectedEtf.indexName.split(" ")[0]} {t("moved")}{" "}
                     <span className={result.qqqReturn >= 0 ? "text-green-600" : "text-red-600"}>
-                      {result.qqqReturn >= 0 ? t.up : t.down} {fmtPct(Math.abs(result.qqqReturn))}
+                      {result.qqqReturn >= 0 ? t("up") : t("down")} {fmtPct(Math.abs(result.qqqReturn))}
                     </span>
                   </li>
                   <li>
-                    USD/KRW {t.moved}{" "}
+                    USD/KRW {t("moved")}{" "}
                     <span className={result.fxReturn >= 0 ? "text-green-600" : "text-red-600"}>
-                      {result.fxReturn >= 0 ? t.up : t.down} {fmtPct(Math.abs(result.fxReturn))}
+                      {result.fxReturn >= 0 ? t("up") : t("down")} {fmtPct(Math.abs(result.fxReturn))}
                     </span>
                   </li>
                   <li>
-                    {t.etfShouldTrade} {fmtKrw(Math.round(result.etfFair))}{t.shouldTradeAt}
+                    {t("etfShouldTrade")} {fmtKrw(Math.round(result.etfFair))}{t("shouldTradeAt")}
                   </li>
                 </ul>
               </div>
             </div>
+          </div>
+
+          {/* 안내문 */}
+          <div className="mt-8 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 text-sm text-amber-900 dark:text-amber-200">
+            <p className="font-medium mb-2">{t("noticeTitle")}</p>
+            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+              {t("noticeLine1")}
+              <br />
+              {t("noticeLine2")}
+              <br />
+              {t("noticeLine3")}
+            </p>
           </div>
         </div>
       )}
