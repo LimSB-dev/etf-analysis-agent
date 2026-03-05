@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import {
   LineChart,
   Line,
@@ -19,10 +19,9 @@ const t = {
   ko: {
     sectionTitle: "전략 시뮬레이션",
     sectionDesc: "과거 데이터 기반으로 매매 신호 전략의 성과를 검증합니다",
+    period1m: "1개월",
     period3m: "3개월",
     period6m: "6개월",
-    period1y: "1년",
-    period3y: "3년",
     runSimulation: "시뮬레이션 실행",
     running: "분석 중...",
     strategyReturn: "전략 수익률",
@@ -38,7 +37,7 @@ const t = {
     strategy: "전략",
     buyHold: "단순 보유",
     noData: "시뮬레이션할 데이터가 부족합니다.",
-    disclaimer: "이 결과는 과거 데이터를 기반으로 한 시뮬레이션이며 미래 수익을 보장하지 않습니다.",
+    disclaimer: "이 결과는 추정 공정가치를 기반으로 한 과거 시뮬레이션이며 미래 수익을 보장하지 않습니다. 실제 거래 시에는 공식 NAV를 참고하세요.",
     tradeHistory: "거래 내역",
     buyDate: "매수일",
     sellDate: "매도일",
@@ -49,14 +48,16 @@ const t = {
     outperformed: "전략이 단순 보유보다",
     underperformed: "단순 보유가 전략보다",
     better: "더 높은 수익을 냈습니다",
+    analysisMethod: "추정 공정가치 기반 시뮬레이션",
+    analysisPeriod: "분석 기간",
+    totalDays: "거래일",
   },
   en: {
     sectionTitle: "Strategy Simulation",
     sectionDesc: "Backtest the signal strategy with historical data",
+    period1m: "1M",
     period3m: "3M",
     period6m: "6M",
-    period1y: "1Y",
-    period3y: "3Y",
     runSimulation: "Run Simulation",
     running: "Analyzing...",
     strategyReturn: "Strategy Return",
@@ -72,7 +73,7 @@ const t = {
     strategy: "Strategy",
     buyHold: "Buy & Hold",
     noData: "Insufficient data for simulation.",
-    disclaimer: "This result is a simulation based on historical data and does not guarantee future returns.",
+    disclaimer: "This is a historical simulation based on estimated fair value and does not guarantee future returns. Please refer to official NAV for actual trading.",
     tradeHistory: "Trade History",
     buyDate: "Buy Date",
     sellDate: "Sell Date",
@@ -83,10 +84,13 @@ const t = {
     outperformed: "The strategy outperformed buy & hold by",
     underperformed: "Buy & hold outperformed the strategy by",
     better: "",
+    analysisMethod: "Estimated Fair Value Based Simulation",
+    analysisPeriod: "Analysis Period",
+    totalDays: "Trading Days",
   },
 } as const
 
-type Period = "3m" | "6m" | "1y" | "3y"
+type Period = "1m" | "3m" | "6m"
 
 interface StrategySimulationProps {
   etfId: string
@@ -96,31 +100,55 @@ interface StrategySimulationProps {
 
 export function StrategySimulation({ etfId, etfName, locale }: StrategySimulationProps) {
   const labels = t[locale]
-  const [period, setPeriod] = useState<Period>("6m")
+  const [period, setPeriod] = useState<Period>("3m")
   const [isLoading, setIsLoading] = useState(false)
-  const [result, setResult] = useState<BacktestResult | null>(null)
+  const [resultsCache, setResultsCache] = useState<Record<Period, BacktestResult | null>>({
+    "1m": null,
+    "3m": null,
+    "6m": null,
+  })
   const [showTrades, setShowTrades] = useState(false)
+  const [autoRun, setAutoRun] = useState(false)
+
+  const result = resultsCache[period]
 
   const periods: { value: Period; label: string }[] = [
+    { value: "1m", label: labels.period1m },
     { value: "3m", label: labels.period3m },
     { value: "6m", label: labels.period6m },
-    { value: "1y", label: labels.period1y },
-    { value: "3y", label: labels.period3y },
   ]
 
   const handleRun = useCallback(async () => {
     setIsLoading(true)
-    setResult(null)
     setShowTrades(false)
+    setAutoRun(true)
     try {
       const data = await runBacktest(etfId, period)
-      setResult(data)
+      setResultsCache((prev) => ({
+        ...prev,
+        [period]: data,
+      }))
     } catch (e) {
       console.error("Backtest failed:", e)
     } finally {
       setIsLoading(false)
     }
   }, [etfId, period])
+
+  useEffect(() => {
+    setResultsCache({
+      "1m": null,
+      "3m": null,
+      "6m": null,
+    })
+    setAutoRun(false)
+  }, [etfId])
+
+  useEffect(() => {
+    if (autoRun && !resultsCache[period] && !isLoading) {
+      handleRun()
+    }
+  }, [period, autoRun, resultsCache, isLoading, handleRun])
 
   const fmtPct = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(2)}%`
   const fmtKrw = (v: number) => `${v.toLocaleString("ko-KR")}` + (locale === "ko" ? "원" : "")
@@ -141,6 +169,9 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {labels.sectionDesc}
               </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                {labels.analysisMethod}
+              </p>
             </div>
           </div>
 
@@ -153,7 +184,6 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
                   type="button"
                   onClick={() => {
                     setPeriod(p.value)
-                    setResult(null)
                   }}
                   className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                     period === p.value
@@ -182,8 +212,46 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
         </div>
       </div>
 
+      {/* Loading Skeleton */}
+      {isLoading && !result && (
+        <div className="animate-in fade-in duration-300">
+          {/* Hero Stats Skeleton */}
+          <div className="px-6 pb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-xl p-5 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
+                  </div>
+                  <div className="h-8 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Chart Skeleton */}
+          <div className="px-6 pb-4">
+            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-3 animate-pulse" />
+            <div className="h-72 md:h-80 bg-gray-50 dark:bg-gray-800/50 rounded-lg animate-pulse" />
+          </div>
+
+          {/* Detail Stats Skeleton */}
+          <div className="px-6 pb-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                  <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse mx-auto" />
+                  <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Results */}
-      {result && result.equityCurve.length > 0 && (
+      {result && result.equityCurve.length > 0 && !isLoading && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
           {/* Hero Stats - Strategy vs Buy & Hold */}
           <div className="px-6 pb-4">
@@ -285,13 +353,16 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
 
           {/* Chart */}
           <div className="px-6 pb-4">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
               <BarChart3 className="w-4 h-4 text-gray-400" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {labels.performanceChart}
               </span>
               <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">
                 {etfName}
+              </span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 w-full md:w-auto md:ml-2">
+                {labels.analysisPeriod}: {result.period.startDate} ~ {result.period.endDate} ({result.period.totalDays} {labels.totalDays})
               </span>
             </div>
             <div className="h-72 md:h-80">

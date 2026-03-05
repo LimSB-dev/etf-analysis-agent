@@ -36,5 +36,12 @@
   "etfShouldTrade": "ETF should trade at",
   "someDataMissing": "Some data could not be fetched automatically. Please enter the missing values manually.",
   "fetchFailed": "Failed to fetch market data. Please try again.",
-  "invalidInput": "Please enter valid positive numbers for all fields."
+  "invalidInput": "Please enter valid positive numbers for all fields.",
+  "navBasedCalculation": "NAV-Based Premium Analysis",
+  "officialNav": "Official NAV",
+  "netAssetValue": "(Net Asset Value)",
+  "navDescription": "Asset manager's official NAV",
+  "tradingAtPremium": "Trading at premium vs NAV",
+  "tradingAtDiscount": "Trading at discount vs NAV",
+  "reference": "Reference"
 }

@@ -189,19 +189,21 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {t.currentPosition}
             </span>
-            <span className={`text-sm font-semibold ${isCheap ? "text-green-600" : isExpensive ? "text-red-600" : "text-yellow-600"}`}>
-              {isCheap ? t.historicallyCheap : isExpensive ? t.historicallyExpensive : t.historicallyNeutral}
-            </span>
           </div>
-          <div className="relative h-3 rounded-full bg-gradient-to-r from-green-200 via-yellow-200 to-red-200 dark:from-green-900/40 dark:via-yellow-900/40 dark:to-red-900/40 overflow-hidden">
-            <div
-              className="absolute top-0 h-full w-1 bg-gray-900 dark:bg-gray-100 rounded-full"
-              style={{ left: `${Math.max(0, Math.min(100, stats.percentile))}%`, transform: "translateX(-50%)" }}
-            />
-          </div>
-          <div className="flex justify-between mt-1">
-            <span className="text-xs text-green-600">{t.cheap}</span>
-            <span className="text-xs text-red-600">{t.expensive}</span>
+          <div className="relative">
+            <div className="relative h-4 rounded-full bg-gradient-to-r from-green-200 via-yellow-200 to-red-200 dark:from-green-900/40 dark:via-yellow-900/40 dark:to-red-900/40 overflow-hidden">
+              <div
+                className="absolute top-0 h-full w-1 bg-gray-900 dark:bg-gray-100 rounded-full shadow-lg"
+                style={{ left: `${Math.max(0, Math.min(100, stats.percentile))}%`, transform: "translateX(-50%)" }}
+              />
+            </div>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-sm font-medium text-green-700 dark:text-green-400">{t.cheap}</span>
+              <span className={`text-sm font-medium ${isCheap ? "text-green-600" : isExpensive ? "text-red-600" : "text-yellow-600"}`}>
+                {isCheap ? t.historicallyCheap : isExpensive ? t.historicallyExpensive : t.historicallyNeutral}
+              </span>
+              <span className="text-sm font-medium text-red-700 dark:text-red-400">{t.expensive}</span>
+            </div>
           </div>
         </div>
 

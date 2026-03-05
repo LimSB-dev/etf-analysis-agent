@@ -36,5 +36,12 @@
   "etfShouldTrade": "ETF는",
   "someDataMissing": "일부 데이터를 자동으로 가져올 수 없습니다. 누락된 값을 직접 입력해주세요.",
   "fetchFailed": "시장 데이터를 가져오지 못했습니다. 다시 시도해주세요.",
-  "invalidInput": "모든 필드에 유효한 양수를 입력해주세요."
+  "invalidInput": "모든 필드에 유효한 양수를 입력해주세요.",
+  "navBasedCalculation": "NAV 기반 괴리율 분석",
+  "officialNav": "공식 NAV",
+  "netAssetValue": "(순자산가치)",
+  "navDescription": "운용사 공시 순자산가치",
+  "tradingAtPremium": "시장가가 NAV 대비 고평가",
+  "tradingAtDiscount": "시장가가 NAV 대비 저평가",
+  "reference": "참고"
 }

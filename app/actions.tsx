@@ -8,8 +8,12 @@ interface MarketData {
   prevClose: number
 }
 
+interface EtfMarketData extends MarketData {
+  nav: number
+}
+
 interface FetchResult {
-  etf: MarketData
+  etf: EtfMarketData
   index: MarketData
   fx: MarketData
 }
@@ -34,39 +38,45 @@ const parsePrice = (str: string | number): number => {
   return Number.parseFloat(str.replace(/,/g, ""))
 }
 
-async function getNaverDomestic(code: string): Promise<MarketData> {
+async function getNaverDomesticEtf(code: string): Promise<EtfMarketData> {
   try {
-    // Naver Mobile Internal API for Domestic Stocks
-    const url = `https://m.stock.naver.com/api/stock/${code}/basic`
-    const res = await fetch(url, { headers: COMMON_HEADERS, next: { revalidate: 10 } })
+    // Naver ETF API with NAV data
+    const url = `https://finance.naver.com/api/sise/etfItemList.nhn`
+    const res = await fetch(url, { 
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Referer": "https://finance.naver.com/",
+        "Accept": "application/json",
+      },
+      next: { revalidate: 10 } 
+    })
 
-    if (!res.ok) throw new Error(`Naver Domestic API error: ${res.status}`)
+    if (!res.ok) throw new Error(`Naver ETF API error: ${res.status}`)
 
     const data = await res.json()
-    // Validating response structure
-    if (!data || !data.closePrice) throw new Error("Invalid data format")
+    const etfList = data?.result?.etfItemList || []
+    
+    // Find ETF by code
+    const etfItem = etfList.find((item: Record<string, unknown>) => item.itemcode === code)
+    
+    if (!etfItem) throw new Error(`ETF not found: ${code}`)
 
-    const currentPrice = parsePrice(data.closePrice)
-    // compareToPreviousClosePrice is absolute difference.
-    // fluctuationsRatio is percentage.
-    // We can calculate prev close safely:
-    // If up (rise), prev = current - diff
-    // If down (fall), prev = current + diff
-    // But easier: prev = current / (1 + ratio/100)
-    // Naver usually provides 'prevClosePrice' in some endpoints but let's check basic.
-    // Actually 'basic' endpoint typically has minimal data.
-    // Let's derive it for safety.
-    const fluctuationRate = parsePrice(data.fluctuationsRatio) // e.g., 1.5 means 1.5%
-    const prevClose = currentPrice / (1 + fluctuationRate / 100)
+    const currentPrice = parsePrice(etfItem.nowVal || 0)
+    const nav = parsePrice(etfItem.nav || 0)
+    
+    // Calculate prevClose from changeRate
+    const changeRate = parsePrice(etfItem.changeRate || 0)
+    const prevClose = changeRate !== 0 ? currentPrice / (1 + changeRate / 100) : currentPrice
 
     return {
       symbol: code,
       price: currentPrice,
-      prevClose: Math.round(prevClose), // KRW usually integer
+      prevClose: Math.round(prevClose),
+      nav: nav,
     }
   } catch (e) {
-    console.error(`Failed to fetch Naver Domestic (${code}):`, e)
-    return { symbol: code, price: 0, prevClose: 0 }
+    console.error(`Failed to fetch Naver ETF (${code}):`, e)
+    return { symbol: code, price: 0, prevClose: 0, nav: 0 }
   }
 }
 
@@ -134,7 +144,7 @@ export async function fetchMarketData(etfId?: string): Promise<FetchResult> {
 
   // Fetch in parallel for speed since Naver is usually faster/less strict than Yahoo
   const [etf, index, fx] = await Promise.all([
-    getNaverDomestic(selectedEtf.code),
+    getNaverDomesticEtf(selectedEtf.code),
     getNaverOverseas(selectedEtf.indexSymbol),
     getNaverFx("FX_USDKRW"),
   ])
@@ -167,8 +177,9 @@ interface ChartPoint {
 
 async function getNaverDomesticChart(code: string, count = 60): Promise<ChartPoint[]> {
   try {
-    // Uses fchart.stock.naver.com XML API (same as pandas-datareader)
-    const url = `https://fchart.stock.naver.com/sise.nhn?symbol=${code}&timeframe=day&count=${count}&requestType=0`
+    // Naver fchart API supports up to ~900 count
+    const safeCount = Math.min(count, 900)
+    const url = `https://fchart.stock.naver.com/sise.nhn?symbol=${code}&timeframe=day&count=${safeCount}&requestType=0`
     const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -205,9 +216,9 @@ async function getNaverDomesticChart(code: string, count = 60): Promise<ChartPoi
 
 async function getNaverOverseasChart(symbol: string, count = 60): Promise<ChartPoint[]> {
   try {
-    // Naver overseas stock uses api.stock.naver.com
-    // symbol format: "QQQ.O" for NASDAQ, "SPY" for NYSE
-    const url = `https://api.stock.naver.com/chart/foreign/item/${symbol}?periodType=dayCandle&count=${count}`
+    // API typically supports up to 900 count
+    const safeCount = Math.min(count, 900)
+    const url = `https://api.stock.naver.com/chart/foreign/item/${symbol}?periodType=dayCandle&count=${safeCount}`
     const res = await fetch(url, {
       headers: {
         ...COMMON_HEADERS,
@@ -242,9 +253,44 @@ async function getNaverOverseasChart(symbol: string, count = 60): Promise<ChartP
 
 async function getNaverFxChart(count = 60): Promise<ChartPoint[]> {
   try {
-    // api.stock.naver.com/marketindex/exchange has a max pageSize of 60
-    const pageSize = Math.min(count, 60)
-    const url = `https://api.stock.naver.com/marketindex/exchange/FX_USDKRW/prices?page=1&pageSize=${pageSize}`
+    // For historical data, use pagination if count > 60
+    if (count > 60) {
+      const pageSize = 60
+      const totalPages = Math.ceil(count / pageSize)
+      const allPoints: ChartPoint[] = []
+
+      for (let page = 1; page <= totalPages; page++) {
+        try {
+          const url = `https://api.stock.naver.com/marketindex/exchange/FX_USDKRW/prices?page=${page}&pageSize=${pageSize}`
+          const res = await fetch(url, { headers: COMMON_HEADERS })
+          if (!res.ok) break
+
+          const json = await res.json()
+          const data = Array.isArray(json) ? json : json?.result || json?.datas || []
+          if (!Array.isArray(data) || data.length === 0) break
+
+          const points = data
+            .map((item: Record<string, unknown>) => {
+              const dateRaw = (item.localTradedAt || item.date || item.localDate || "") as string
+              const date = dateRaw.includes("T") ? dateRaw.split("T")[0] : dateRaw
+              const closeRaw = item.closePrice ?? item.basePrice ?? item.tradedPrice ?? 0
+              const close = typeof closeRaw === "number" ? closeRaw : parsePrice(String(closeRaw))
+              return { date, close }
+            })
+            .filter((p: ChartPoint) => p.date && p.close > 0)
+
+          allPoints.push(...points)
+          if (data.length < pageSize) break
+        } catch {
+          break
+        }
+      }
+
+      return allPoints.reverse()
+    }
+
+    // For count <= 60, single request
+    const url = `https://api.stock.naver.com/marketindex/exchange/FX_USDKRW/prices?page=1&pageSize=${count}`
     const res = await fetch(url, { headers: COMMON_HEADERS })
 
     if (!res.ok) {
@@ -256,16 +302,19 @@ async function getNaverFxChart(count = 60): Promise<ChartPoint[]> {
     const json = await res.json()
     console.log("[v0] FX chart raw sample:", JSON.stringify(json).slice(0, 500))
 
-    const data = Array.isArray(json) ? json : (json?.result || json?.datas || [])
+    const data = Array.isArray(json) ? json : json?.result || json?.datas || []
     if (!Array.isArray(data)) return []
 
-    return data.map((item: Record<string, unknown>) => {
-      const dateRaw = (item.localTradedAt || item.date || item.localDate || "") as string
-      const date = dateRaw.includes("T") ? dateRaw.split("T")[0] : dateRaw
-      const closeRaw = item.closePrice ?? item.basePrice ?? item.tradedPrice ?? 0
-      const close = typeof closeRaw === "number" ? closeRaw : parsePrice(String(closeRaw))
-      return { date, close }
-    }).filter((p: ChartPoint) => p.date && p.close > 0).reverse()
+    return data
+      .map((item: Record<string, unknown>) => {
+        const dateRaw = (item.localTradedAt || item.date || item.localDate || "") as string
+        const date = dateRaw.includes("T") ? dateRaw.split("T")[0] : dateRaw
+        const closeRaw = item.closePrice ?? item.basePrice ?? item.tradedPrice ?? 0
+        const close = typeof closeRaw === "number" ? closeRaw : parsePrice(String(closeRaw))
+        return { date, close }
+      })
+      .filter((p: ChartPoint) => p.date && p.close > 0)
+      .reverse()
   } catch (e) {
     console.error("Failed to fetch FX chart:", e)
     return []
@@ -274,7 +323,7 @@ async function getNaverFxChart(count = 60): Promise<ChartPoint[]> {
 
 export async function fetchPremiumHistory(etfId?: string): Promise<PremiumHistoryResult> {
   const selectedEtf = ETF_OPTIONS.find((e) => e.id === etfId) || ETF_OPTIONS[0]
-  const days = 65 // fetch extra for prev-day calculations
+  const days = 200 // fetch ~6 months for better context
 
   const [etfChart, indexChart, fxChart] = await Promise.all([
     getNaverDomesticChart(selectedEtf.code, days),

@@ -21,6 +21,7 @@ type MarketInputs = {
   fxPrev: string;
   fxNow: string;
   etfCurrent: string;
+  nav: string;
 };
 import { fetchMarketData } from "@/app/actions";
 import { ETF_OPTIONS, type EtfOption } from "@/lib/etf-options";
@@ -50,6 +51,7 @@ export function EtfCalculator() {
     fxPrev: "",
     fxNow: "",
     etfCurrent: "",
+    nav: "",
   };
 
   const [inputs, setInputs] = useState<MarketInputs>(defaultInputs);
@@ -93,6 +95,8 @@ export function EtfCalculator() {
             : inputs.etfPrev,
         etfCurrent:
           data.etf.price > 0 ? data.etf.price.toString() : inputs.etfCurrent,
+        nav:
+          data.etf.nav > 0 ? data.etf.nav.toString() : inputs.nav,
         qqqPrev:
           data.index.prevClose > 0
             ? data.index.prevClose.toString()
@@ -121,42 +125,42 @@ export function EtfCalculator() {
   const performCalculation = (data?: MarketInputs) => {
     const source = data || inputs;
 
-    const etfPrev = Number.parseFloat(source.etfPrev);
+    const etfCurrent = Number.parseFloat(source.etfCurrent);
+    const nav = Number.parseFloat(source.nav);
     const qqqPrev = Number.parseFloat(source.qqqPrev);
     const qqqAfter = Number.parseFloat(source.qqqAfter);
     const fxPrev = Number.parseFloat(source.fxPrev);
     const fxNow = Number.parseFloat(source.fxNow);
-    const etfCurrent = Number.parseFloat(source.etfCurrent);
 
-    if (
-      [etfPrev, qqqPrev, qqqAfter, fxPrev, fxNow, etfCurrent].some(
-        (val) => isNaN(val) || val <= 0,
-      )
-    ) {
+    if (isNaN(etfCurrent) || etfCurrent <= 0 || isNaN(nav) || nav <= 0) {
       return false;
     }
 
-    // 1. Index Return
-    const qqqReturn = (qqqAfter - qqqPrev) / qqqPrev;
+    // 1. Index Return (참고용)
+    const qqqReturn = !isNaN(qqqPrev) && !isNaN(qqqAfter) && qqqPrev > 0 
+      ? (qqqAfter - qqqPrev) / qqqPrev 
+      : 0;
 
-    // 2. FX Return
-    const fxReturn = (fxNow - fxPrev) / fxPrev;
+    // 2. FX Return (참고용)
+    const fxReturn = !isNaN(fxPrev) && !isNaN(fxNow) && fxPrev > 0 
+      ? (fxNow - fxPrev) / fxPrev 
+      : 0;
 
-    // 3. Fair Value
-    const etfFair = etfPrev * (1 + qqqReturn) * (1 + fxReturn);
+    // 3. Premium/Discount (NAV 기준)
+    const premium = ((etfCurrent - nav) / nav) * 100;
 
-    // 4. Premium/Discount
-    const premium = ((etfCurrent - etfFair) / etfFair) * 100;
-
-    // 5. Signal
+    // 4. Signal
     let signal: "BUY" | "SELL" | "HOLD" = "HOLD";
-    if (premium >= 1) signal = "SELL";
-    else if (premium <= -1) signal = "BUY";
+    if (premium >= 1) {
+      signal = "SELL";
+    } else if (premium <= -1) {
+      signal = "BUY";
+    }
 
     setResult({
       qqqReturn,
       fxReturn,
-      etfFair,
+      etfFair: nav,
       premium,
       signal,
     });
@@ -275,9 +279,9 @@ export function EtfCalculator() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
                 {/* Group 1: ETF Data */}
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></span>
-                    {selectedEtf.name} ({selectedEtf.code}.KS)
+                  <h3 className="min-h-[44px] font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0"></span>
+                    <span>{selectedEtf.name} ({selectedEtf.code}.KS)</span>
                   </h3>
                   <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
                     <div className="flex justify-between text-sm">
@@ -288,14 +292,18 @@ export function EtfCalculator() {
                       <span className="text-gray-500 dark:text-gray-400">{t("currentPrice")}</span>
                       <span className="font-medium text-gray-900 dark:text-gray-100">{fmtKrw(Number.parseFloat(inputs.etfCurrent))}</span>
                     </div>
+                    <div className="flex justify-between text-sm border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+                      <span className="text-gray-500 dark:text-gray-400 font-semibold">NAV</span>
+                      <span className="font-semibold text-blue-600 dark:text-blue-400">{fmtKrw(Number.parseFloat(inputs.nav))}</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Group 2: Index Data */}
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
-                    <span className="w-2 h-2 rounded-full bg-purple-500 mt-1.5"></span>
-                    {selectedEtf.indexName} (USD)
+                  <h3 className="min-h-[44px] font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
+                    <span className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 flex-shrink-0"></span>
+                    <span>{selectedEtf.indexName} (USD)</span>
                   </h3>
                   <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
                     <div className="flex justify-between text-sm">
@@ -303,7 +311,7 @@ export function EtfCalculator() {
                       <span className="font-medium text-gray-900 dark:text-gray-100">{fmtUsd(Number.parseFloat(inputs.qqqPrev))}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">{t("lastClose")}</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t("currentPrice")}</span>
                       <span className="font-medium text-gray-900 dark:text-gray-100">{fmtUsd(Number.parseFloat(inputs.qqqAfter))}</span>
                     </div>
                   </div>
@@ -311,17 +319,17 @@ export function EtfCalculator() {
 
                 {/* Group 3: FX Data */}
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
-                    <span className="w-2 h-2 rounded-full bg-green-500 mt-1.5"></span>
-                    {t("exchangeRate")} (KRW/USD)
+                  <h3 className="min-h-[44px] font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0"></span>
+                    <span>{t("exchangeRate")} (KRW/USD)</span>
                   </h3>
                   <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">{t("prevRate")}</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t("prevClose")}</span>
                       <span className="font-medium text-gray-900 dark:text-gray-100">{fmt(Number.parseFloat(inputs.fxPrev))}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">{t("currentRate")}</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t("currentPrice")}</span>
                       <span className="font-medium text-gray-900 dark:text-gray-100">{fmt(Number.parseFloat(inputs.fxNow))}</span>
                     </div>
                   </div>
@@ -393,57 +401,60 @@ export function EtfCalculator() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Fair Value Calculation */}
+            {/* NAV-Based Calculation */}
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Calculator className="w-5 h-5 text-gray-500" />
-                {t("fairValueCalculation")}
+                {t("navBasedCalculation")}
               </h3>
 
               <div className="space-y-4 text-sm">
-                {/* Index Step */}
-                <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                  <div className="flex justify-between text-gray-500 dark:text-gray-400 mb-2">
-                    <span>
-                      1. {selectedEtf.indexName.split(" ")[0]}{" "}
-                      {t("indexReturn")}
-                    </span>
-                    <span>{fmtPct(result.qqqReturn)}</span>
-                  </div>
-                  <div className="font-mono text-xs text-gray-600 dark:text-gray-300">
-                    ({fmtUsd(Number.parseFloat(inputs.qqqAfter))} -{" "}
-                    {fmtUsd(Number.parseFloat(inputs.qqqPrev))}) /{" "}
-                    {fmtUsd(Number.parseFloat(inputs.qqqPrev))}
-                  </div>
-                </div>
-
-                {/* FX Step */}
-                <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                  <div className="flex justify-between text-gray-500 dark:text-gray-400 mb-2">
-                    <span>2. {t("fxReturn")}</span>
-                    <span>{fmtPct(result.fxReturn)}</span>
-                  </div>
-                  <div className="font-mono text-xs text-gray-600 dark:text-gray-300">
-                    ({fmt(Number.parseFloat(inputs.fxNow))} -{" "}
-                    {fmt(Number.parseFloat(inputs.fxPrev))}) /{" "}
-                    {fmt(Number.parseFloat(inputs.fxPrev))}
-                  </div>
-                </div>
-
-                {/* Final Formula */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 p-4 rounded-lg">
+                {/* NAV (Official) */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-900/50 p-4 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-semibold text-blue-900 dark:text-blue-100">
-                      3. {t("fairValue")}
+                      {t("officialNav")}
                     </span>
                     <span className="font-bold text-lg text-blue-700 dark:text-blue-300">
                       {fmtKrw(Math.round(result.etfFair))}
                     </span>
                   </div>
-                  <div className="font-mono text-xs text-blue-800/70 dark:text-blue-200/70">
-                    ETF_prev × (1 + Index%) × (1 + FX%)
+                  <div className="text-xs text-blue-800/70 dark:text-blue-200/70">
+                    {t("navDescription")}
                   </div>
                 </div>
+
+                {/* Market Factors (Reference) */}
+                {result.qqqReturn !== 0 && result.fxReturn !== 0 && (
+                  <>
+                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+                      <div className="flex justify-between text-gray-500 dark:text-gray-400 mb-2">
+                        <span>
+                          {selectedEtf.indexName.split(" ")[0]}{" "}
+                          {t("indexReturn")}
+                        </span>
+                        <span>{fmtPct(result.qqqReturn)}</span>
+                      </div>
+                      <div className="font-mono text-xs text-gray-600 dark:text-gray-300">
+                        ({fmtUsd(Number.parseFloat(inputs.qqqAfter))} -{" "}
+                        {fmtUsd(Number.parseFloat(inputs.qqqPrev))}) /{" "}
+                        {fmtUsd(Number.parseFloat(inputs.qqqPrev))}
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+                      <div className="flex justify-between text-gray-500 dark:text-gray-400 mb-2">
+                        <span>{t("fxReturn")}</span>
+                        <span>{fmtPct(result.fxReturn)}</span>
+                      </div>
+                      <div className="font-mono text-xs text-gray-600 dark:text-gray-300">
+                        ({fmt(Number.parseFloat(inputs.fxNow))} -{" "}
+                        {fmt(Number.parseFloat(inputs.fxPrev))}) /{" "}
+                        {fmt(Number.parseFloat(inputs.fxPrev))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -455,11 +466,11 @@ export function EtfCalculator() {
               </h3>
 
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-                <div className="p-4 flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {t("fairValue")}
+                <div className="p-4 flex justify-between items-center bg-blue-50/50 dark:bg-blue-900/10">
+                  <span className="text-gray-600 dark:text-gray-400 font-semibold">
+                    NAV {t("netAssetValue")}
                   </span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  <span className="font-semibold text-blue-700 dark:text-blue-300">
                     {fmtKrw(Math.round(result.etfFair))}
                   </span>
                 </div>
@@ -477,9 +488,9 @@ export function EtfCalculator() {
                   </span>
                   <span
                     className={`font-semibold ${
-                      result.etfFair > Number.parseFloat(inputs.etfCurrent)
-                        ? "text-green-600"
-                        : "text-red-600"
+                      Number.parseFloat(inputs.etfCurrent) > result.etfFair
+                        ? "text-red-600"
+                        : "text-green-600"
                     }`}
                   >
                     {fmtKrw(
@@ -496,33 +507,47 @@ export function EtfCalculator() {
                 </h4>
                 <ul className="list-disc list-inside space-y-1">
                   <li>
-                    {selectedEtf.indexName.split(" ")[0]} {t("moved")}{" "}
-                    <span
-                      className={
-                        result.qqqReturn >= 0
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }
-                    >
-                      {result.qqqReturn >= 0 ? t("up") : t("down")}{" "}
-                      {fmtPct(Math.abs(result.qqqReturn))}
-                    </span>
+                    {t("officialNav")}: {fmtKrw(Math.round(result.etfFair))}
                   </li>
                   <li>
-                    USD/KRW {t("moved")}{" "}
-                    <span
-                      className={
-                        result.fxReturn >= 0 ? "text-green-600" : "text-red-600"
-                      }
-                    >
-                      {result.fxReturn >= 0 ? t("up") : t("down")}{" "}
-                      {fmtPct(Math.abs(result.fxReturn))}
-                    </span>
+                    {t("currentMarketPrice")}: {fmtKrw(Number.parseFloat(inputs.etfCurrent))}
                   </li>
                   <li>
-                    {t("etfShouldTrade")} {fmtKrw(Math.round(result.etfFair))}
-                    {t("shouldTradeAt")}
+                    {result.premium > 0 ? t("tradingAtPremium") : t("tradingAtDiscount")}{" "}
+                    <span
+                      className={
+                        result.premium > 0 ? "text-red-600" : "text-green-600"
+                      }
+                    >
+                      {Math.abs(result.premium).toFixed(2)}%
+                    </span>
                   </li>
+                  {result.qqqReturn !== 0 && result.fxReturn !== 0 && (
+                    <>
+                      <li className="text-gray-500 dark:text-gray-400 text-xs mt-2">
+                        {t("reference")}: {selectedEtf.indexName.split(" ")[0]}{" "}
+                        <span
+                          className={
+                            result.qqqReturn >= 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }
+                        >
+                          {result.qqqReturn >= 0 ? t("up") : t("down")}{" "}
+                          {fmtPct(Math.abs(result.qqqReturn))}
+                        </span>
+                        , USD/KRW{" "}
+                        <span
+                          className={
+                            result.fxReturn >= 0 ? "text-green-600" : "text-red-600"
+                          }
+                        >
+                          {result.fxReturn >= 0 ? t("up") : t("down")}{" "}
+                          {fmtPct(Math.abs(result.fxReturn))}
+                        </span>
+                      </li>
+                    </>
+                  )}
                 </ul>
               </div>
             </div>

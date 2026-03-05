@@ -33,6 +33,11 @@ export interface BacktestResult {
     buyHoldReturn: number
     excessReturn: number // alpha
   }
+  period: {
+    startDate: string
+    endDate: string
+    totalDays: number
+  }
 }
 
 // --- Internal chart data fetchers (reuse same APIs as actions.tsx) ---
@@ -56,7 +61,9 @@ interface ChartPoint {
 
 async function getNaverDomesticChart(code: string, count = 60): Promise<ChartPoint[]> {
   try {
-    const url = `https://fchart.stock.naver.com/sise.nhn?symbol=${code}&timeframe=day&count=${count}&requestType=0`
+    // Naver fchart API supports up to ~900 count
+    const safeCount = Math.min(count, 900)
+    const url = `https://fchart.stock.naver.com/sise.nhn?symbol=${code}&timeframe=day&count=${safeCount}&requestType=0`
     const res = await fetch(url, {
       headers: {
         "User-Agent":
@@ -92,7 +99,9 @@ async function getNaverDomesticChart(code: string, count = 60): Promise<ChartPoi
 
 async function getNaverOverseasChart(symbol: string, count = 60): Promise<ChartPoint[]> {
   try {
-    const url = `https://api.stock.naver.com/chart/foreign/item/${symbol}?periodType=dayCandle&count=${count}`
+    // API typically supports up to 900 count
+    const safeCount = Math.min(count, 900)
+    const url = `https://api.stock.naver.com/chart/foreign/item/${symbol}?periodType=dayCandle&count=${safeCount}`
     const res = await fetch(url, {
       headers: {
         ...COMMON_HEADERS,
@@ -156,18 +165,16 @@ async function getNaverFxChartPaginated(totalCount: number): Promise<ChartPoint[
 }
 
 // --- Period mapping ---
-type Period = "3m" | "6m" | "1y" | "3y"
+type Period = "1m" | "3m" | "6m"
 
 function getTradingDaysForPeriod(period: Period): number {
   switch (period) {
+    case "1m":
+      return 25
     case "3m":
       return 70
     case "6m":
       return 135
-    case "1y":
-      return 260
-    case "3y":
-      return 780
   }
 }
 
@@ -181,6 +188,8 @@ export async function runBacktest(etfId: string, period: Period): Promise<Backte
     getNaverOverseasChart(selectedEtf.indexSymbol, days),
     getNaverFxChartPaginated(days),
   ])
+
+  console.log(`[Backtest ${period}] Requested: ${days} days, Got - ETF: ${etfChart.length}, Index: ${indexChart.length}, FX: ${fxChart.length}`)
 
   // Build lookup maps by date
   const indexMap = new Map(indexChart.map((p) => [p.date, p.close]))
@@ -248,6 +257,11 @@ export async function runBacktest(etfId: string, period: Period): Promise<Backte
         strategyReturn: 0,
         buyHoldReturn: 0,
         excessReturn: 0,
+      },
+      period: {
+        startDate: "",
+        endDate: "",
+        totalDays: 0,
       },
     }
   }
@@ -336,6 +350,11 @@ export async function runBacktest(etfId: string, period: Period): Promise<Backte
       strategyReturn: Number(strategyReturn.toFixed(2)),
       buyHoldReturn: Number(buyHoldReturn.toFixed(2)),
       excessReturn: Number((strategyReturn - buyHoldReturn).toFixed(2)),
+    },
+    period: {
+      startDate: dailyData[0].date,
+      endDate: dailyData[dailyData.length - 1].date,
+      totalDays: dailyData.length,
     },
   }
 }
