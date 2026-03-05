@@ -482,14 +482,14 @@ export function EtfCalculator() {
               <div className="space-y-6">
                 <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${!isLoading ? "animate-in fade-in duration-200" : ""}`}>
                   {/* Group 1: ETF Current Price */}
-                  <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
-                    <div className="flex items-center gap-2 mb-3">
+                  <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-5 flex flex-col items-center text-center">
+                    <div className="flex items-center justify-center gap-2 mb-3">
                       <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
                       <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
                         {selectedEtf.name} ({selectedEtf.code}.KS)
                       </h3>
                     </div>
-                    <div className="text-center">
+                    <div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                         {isKoreanMarketOpen ? t("currentPrice") : t("priceAfterMarketClose")}
                       </div>
@@ -500,8 +500,8 @@ export function EtfCalculator() {
                   </div>
 
                   {/* Group 2: 실시간 추정 가격 */}
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-700 rounded-lg p-5">
-                    <div className="mb-3 text-center">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-700 rounded-lg p-5 flex flex-col items-center text-center">
+                    <div className="mb-3">
                       <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
                         {t("realtimeEstimatedFairPrice")}
                       </h3>
