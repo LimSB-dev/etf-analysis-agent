@@ -272,20 +272,17 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
             {isExpensive && <TrendingUp className="w-5 h-5" />}
             {!isCheap && !isExpensive && <Minus className="w-5 h-5" />}
           </div>
-          <p>
-            {isCheap
-              ? t.cheapInterpretation
+          <p>{isCheap
+            ? t.cheapInterpretation
+              .replace("{premium}", fmt(stats.current))
+              .replace("{percentile}", `${stats.percentile}`)
+            : isExpensive
+              ? t.expensiveInterpretation
                 .replace("{premium}", fmt(stats.current))
                 .replace("{percentile}", `${stats.percentile}`)
-              : isExpensive
-                ? t.expensiveInterpretation
-                  .replace("{premium}", fmt(stats.current))
-                  .replace("{percentile}", `${stats.percentile}`)
-                : t.neutralInterpretation
-                  .replace("{premium}", fmt(stats.current))
-                  .replace("{percentile}", `${stats.percentile}`)
-            }
-          </p>
+              : t.neutralInterpretation
+                .replace("{premium}", fmt(stats.current))
+                .replace("{percentile}", `${stats.percentile}`)}</p>
         </div>
       </div>
     </div>
