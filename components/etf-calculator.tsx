@@ -31,6 +31,7 @@ import { ETF_OPTIONS, type EtfOption } from "@/lib/etf-options";
 import { useLocaleState } from "@/components/i18n-provider";
 import { PremiumHistoryChart } from "@/components/premium-history-chart";
 import { StrategySimulation } from "@/components/strategy-simulation";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getAlertRequestIssueUrl, getAlertRequestMailto } from "@/lib/site-config";
 
 type CalculationResult = {
@@ -348,22 +349,26 @@ export function EtfCalculator() {
         </div>
       </div>
 
-      {/* Page Title - 좌측 정렬, i18n은 우측 상단 */}
-      <div className="relative flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 pb-2">
-        <div className="min-w-0">
+      {/* Page Title - 좌측, i18n·테마 우측 / 모바일에서도 between */}
+      <div className="relative flex flex-row justify-between items-start gap-3 pb-2">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl">
             {pageTitle}
           </h1>
         </div>
-        <button
-          type="button"
-          onClick={() => setLocale(locale === "ko" ? "en" : "ko")}
-          className="self-start inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-800/80 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300 transition-colors shrink-0"
-          aria-label={locale === "ko" ? "Switch to English" : "한국어로 전환"}
-        >
-          <Globe className="w-2.5 h-2.5 opacity-80" />
-          {locale === "ko" ? "EN" : "KO"}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => setLocale(locale === "ko" ? "en" : "ko")}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300 transition-colors shrink-0"
+            aria-label={locale === "ko" ? "Switch to English" : "한국어로 전환"}
+            title={locale === "ko" ? "English" : "한국어"}
+          >
+            <Globe className="w-2.5 h-2.5 opacity-80" />
+            <span className="sr-only">{locale === "ko" ? "EN" : "KO"}</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-900 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
