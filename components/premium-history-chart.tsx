@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { BarChart3, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { BarChart3 } from "lucide-react"
 import {
   Area,
   AreaChart,
@@ -30,6 +30,26 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
   const [error, setError] = useState<string | null>(null)
   const prevPremiumRef = useRef<number | undefined>(undefined)
 
+  const applyCurrentPremium = (prev: PremiumHistoryResult, premium: number) => {
+    const updated = { ...prev, data: [...prev.data], stats: { ...prev.stats } }
+    if (updated.data.length === 0) {
+      return updated
+    }
+    const rounded = Number(premium.toFixed(2))
+    updated.data[updated.data.length - 1] = {
+      ...updated.data[updated.data.length - 1],
+      premium: rounded,
+    }
+    updated.stats.current = rounded
+    const premiums = updated.data.map((p) => p.premium)
+    updated.stats.highest = Math.max(...premiums)
+    updated.stats.lowest = Math.min(...premiums)
+    updated.stats.average = Number((premiums.reduce((a, b) => a + b, 0) / premiums.length).toFixed(2))
+    const range = updated.stats.highest - updated.stats.lowest
+    updated.stats.percentile = range > 0 ? Math.round(((updated.stats.current - updated.stats.lowest) / range) * 100) : 50
+    return updated
+  }
+
   useEffect(() => {
     let cancelled = false
 
@@ -39,7 +59,11 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
       try {
         const result = await fetchPremiumHistory(etfId)
         if (!cancelled) {
-          setData(result)
+          const final =
+            currentPremium !== undefined && result.data.length > 0
+              ? applyCurrentPremium(result, currentPremium)
+              : result
+          setData(final)
         }
       } catch (e) {
         if (!cancelled) {
@@ -59,33 +83,18 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
     if (!data || currentPremium === undefined || data.data.length === 0) {
       return
     }
-    
+
     if (prevPremiumRef.current === currentPremium) {
       return
     }
-    
+
     prevPremiumRef.current = currentPremium
-    
+
     setData((prevData) => {
       if (!prevData) {
         return prevData
       }
-      
-      const updatedData = { ...prevData }
-      updatedData.data = [...prevData.data]
-      updatedData.data[updatedData.data.length - 1] = {
-        ...updatedData.data[updatedData.data.length - 1],
-        premium: Number(currentPremium.toFixed(2))
-      }
-      updatedData.stats = { ...prevData.stats }
-      updatedData.stats.current = Number(currentPremium.toFixed(2))
-      const premiums = updatedData.data.map((p) => p.premium)
-      updatedData.stats.highest = Math.max(...premiums)
-      updatedData.stats.lowest = Math.min(...premiums)
-      updatedData.stats.average = Number((premiums.reduce((a, b) => a + b, 0) / premiums.length).toFixed(2))
-      const range = updatedData.stats.highest - updatedData.stats.lowest
-      updatedData.stats.percentile = range > 0 ? Math.round(((updatedData.stats.current - updatedData.stats.lowest) / range) * 100) : 50
-      return updatedData
+      return applyCurrentPremium(prevData, currentPremium)
     })
   }, [currentPremium])
 
@@ -93,16 +102,38 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <BarChart3 className="w-5 h-5 text-gray-500" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t.title}</h3>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="flex items-center gap-3 text-gray-500">
-            <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm">{t.loading}</span>
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="p-6 pb-0">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="w-5 h-5 text-gray-500 shrink-0" />
+              <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            </div>
+            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
           </div>
+        </div>
+        <div className="px-2 md:px-6 pt-4 pb-2">
+          <div className="h-64 bg-gray-50 dark:bg-gray-800/50 rounded-lg animate-pulse" />
+        </div>
+        <div className="p-6 pt-2">
+          <div className="mb-6">
+            <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
+            <div className="h-4 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+            <div className="flex justify-between mt-2">
+              <div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 text-center">
+                <div className="h-3 w-12 bg-gray-200 dark:bg-gray-700 rounded mb-2 mx-auto animate-pulse" />
+                <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded mx-auto animate-pulse" />
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 h-14 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
         </div>
       </div>
     )
@@ -260,19 +291,14 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
         </div>
 
         {/* Interpretation */}
-        <div className={`mt-4 rounded-lg p-4 flex items-start gap-3 text-sm ${
+        <div className={`mt-4 rounded-lg p-4 text-sm ${
           isCheap
             ? "bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200"
             : isExpensive
               ? "bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200"
               : "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200"
         }`}>
-          <div className="flex-shrink-0 mt-0.5">
-            {isCheap && <TrendingDown className="w-5 h-5" />}
-            {isExpensive && <TrendingUp className="w-5 h-5" />}
-            {!isCheap && !isExpensive && <Minus className="w-5 h-5" />}
-          </div>
-          <p>{isCheap
+          <p className="whitespace-pre-line">{isCheap
             ? t.cheapInterpretation
               .replace("{premium}", fmt(stats.current))
               .replace("{percentile}", `${stats.percentile}`)

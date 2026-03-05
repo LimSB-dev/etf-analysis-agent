@@ -9,8 +9,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'ETF 적정가 계산기 | ETF Fair Value Calculator',
-  description: '한국 상장 미국 ETF(TIGER, KODEX, ACE)의 적정가를 실시간으로 계산하고 매수/매도 신호를 확인하세요.',
+  title: 'ETF 프리미엄 분석 플랫폼 | ETF Premium Analysis',
+  description: '한국 상장 미국 ETF(TIGER, KODEX, ACE)의 프리미엄을 실시간으로 분석하고 매수/매도 신호를 확인하세요.',
   generator: 'v0.app',
   icons: {
     icon: [

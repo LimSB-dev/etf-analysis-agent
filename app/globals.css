@@ -120,9 +120,7 @@
     @apply border-border outline-ring/50;
   }
   html {
-    scroll-snap-type: y proximity;
-    scroll-behavior: smooth;
-    scroll-padding-top: 100px;
+    scroll-behavior: auto;
   }
   body {
     @apply bg-background text-foreground;
