@@ -254,9 +254,7 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
             </div>
             <div className="flex justify-between items-center mt-2">
               <span className="text-sm font-medium text-green-700 dark:text-green-400">{t.cheap}</span>
-              <span className={`text-sm font-medium ${isCheap ? "text-green-600" : isExpensive ? "text-red-600" : "text-yellow-600"}`}>
-                {isCheap ? t.historicallyCheap : isExpensive ? t.historicallyExpensive : t.historicallyNeutral}
-              </span>
+              <span />
               <span className="text-sm font-medium text-red-700 dark:text-red-400">{t.expensive}</span>
             </div>
           </div>
