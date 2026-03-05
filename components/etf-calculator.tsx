@@ -6,7 +6,6 @@ import { Calculator, Info, TrendingUp, TrendingDown, Minus, RefreshCw, ChevronDo
 import { fetchMarketData } from "@/app/actions"
 import { ETF_OPTIONS, type EtfOption } from "@/lib/etf-options"
 import { translations, type Locale } from "@/lib/i18n"
-import { PremiumHistoryChart } from "@/components/premium-history-chart"
 
 type CalculationResult = {
   qqqReturn: number
@@ -541,16 +540,6 @@ export function EtfCalculator() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Premium History Chart - show after calculation */}
-      {result && (
-        <PremiumHistoryChart
-          etfId={selectedEtf.id}
-          etfName={selectedEtf.name}
-          currentPremium={result.premium}
-          locale={locale}
-        />
       )}
     </div>
   )
