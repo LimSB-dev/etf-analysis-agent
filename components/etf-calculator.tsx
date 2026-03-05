@@ -1,28 +1,38 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useRef } from "react"
-import { useTranslations } from "next-intl"
-import { Calculator, Info, TrendingUp, TrendingDown, Minus, RefreshCw, ChevronDown, Globe } from "lucide-react"
-import { fetchMarketData } from "@/app/actions"
-import { ETF_OPTIONS, type EtfOption } from "@/lib/etf-options"
-import { useLocaleState } from "@/components/i18n-provider"
+import type React from "react";
+import { useState, useRef } from "react";
+import { useTranslations } from "next-intl";
+import {
+  Calculator,
+  Info,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  RefreshCw,
+  ChevronDown,
+  Globe,
+} from "lucide-react";
+import { fetchMarketData } from "@/app/actions";
+import { ETF_OPTIONS, type EtfOption } from "@/lib/etf-options";
+import { useLocaleState } from "@/components/i18n-provider";
+import { PremiumHistoryChart } from "@/components/premium-history-chart";
 
 type CalculationResult = {
-  qqqReturn: number
-  fxReturn: number
-  etfFair: number
-  premium: number
-  signal: "BUY" | "SELL" | "HOLD"
-}
+  qqqReturn: number;
+  fxReturn: number;
+  etfFair: number;
+  premium: number;
+  signal: "BUY" | "SELL" | "HOLD";
+};
 
 export function EtfCalculator() {
-  const t = useTranslations()
-  const { locale, setLocale } = useLocaleState()
-  const [isLoading, setIsLoading] = useState(false)
-  const pageTitle = t("pageTitle")
-  const pageDescription = t("pageDescription")
-  const [selectedEtf, setSelectedEtf] = useState<EtfOption>(ETF_OPTIONS[0])
+  const t = useTranslations();
+  const { locale, setLocale } = useLocaleState();
+  const [isLoading, setIsLoading] = useState(false);
+  const pageTitle = t("pageTitle");
+  const pageDescription = t("pageDescription");
+  const [selectedEtf, setSelectedEtf] = useState<EtfOption>(ETF_OPTIONS[0]);
   const [inputs, setInputs] = useState({
     etfPrev: "",
     qqqPrev: "",
@@ -30,15 +40,15 @@ export function EtfCalculator() {
     fxPrev: "",
     fxNow: "",
     etfCurrent: "",
-  })
+  });
 
-  const [result, setResult] = useState<CalculationResult | null>(null)
-  const resultRef = useRef<HTMLDivElement>(null)
+  const [result, setResult] = useState<CalculationResult | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   const handleEtfChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const etf = ETF_OPTIONS.find((o) => o.id === e.target.value)
+    const etf = ETF_OPTIONS.find((o) => o.id === e.target.value);
     if (etf) {
-      setSelectedEtf(etf)
+      setSelectedEtf(etf);
       setInputs({
         etfPrev: "",
         qqqPrev: "",
@@ -46,92 +56,109 @@ export function EtfCalculator() {
         fxPrev: "",
         fxNow: "",
         etfCurrent: "",
-      })
-      setResult(null)
+      });
+      setResult(null);
     }
-  }
+  };
 
   const scrollToResult = () => {
     setTimeout(() => {
-      resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-    }, 100)
-  }
+      resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
 
   const handleFetchData = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const data = await fetchMarketData(selectedEtf.id)
+      const data = await fetchMarketData(selectedEtf.id);
 
-      if (data.etf.price === 0 || data.index.price === 0 || data.fx.price === 0) {
-        alert(t("someDataMissing"))
+      if (
+        data.etf.price === 0 ||
+        data.index.price === 0 ||
+        data.fx.price === 0
+      ) {
+        alert(t("someDataMissing"));
       }
 
       const newInputs = {
         ...inputs,
-        etfPrev: data.etf.prevClose > 0 ? data.etf.prevClose.toString() : inputs.etfPrev,
-        etfCurrent: data.etf.price > 0 ? data.etf.price.toString() : inputs.etfCurrent,
-        qqqPrev: data.index.prevClose > 0 ? data.index.prevClose.toString() : inputs.qqqPrev,
-        qqqAfter: data.index.price > 0 ? data.index.price.toString() : inputs.qqqAfter,
-        fxPrev: data.fx.prevClose > 0 ? data.fx.prevClose.toString() : inputs.fxPrev,
+        etfPrev:
+          data.etf.prevClose > 0
+            ? data.etf.prevClose.toString()
+            : inputs.etfPrev,
+        etfCurrent:
+          data.etf.price > 0 ? data.etf.price.toString() : inputs.etfCurrent,
+        qqqPrev:
+          data.index.prevClose > 0
+            ? data.index.prevClose.toString()
+            : inputs.qqqPrev,
+        qqqAfter:
+          data.index.price > 0 ? data.index.price.toString() : inputs.qqqAfter,
+        fxPrev:
+          data.fx.prevClose > 0 ? data.fx.prevClose.toString() : inputs.fxPrev,
         fxNow: data.fx.price > 0 ? data.fx.price.toString() : inputs.fxNow,
-      }
+      };
 
-      setInputs(newInputs)
+      setInputs(newInputs);
 
       // 데이터가 모두 있으면 자동으로 계산 실행 후 스크롤
       if (performCalculation(newInputs)) {
-        scrollToResult()
+        scrollToResult();
       }
     } catch (error) {
-      console.error("Failed to fetch data", error)
-      alert(t("fetchFailed"))
+      console.error("Failed to fetch data", error);
+      alert(t("fetchFailed"));
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setInputs((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setInputs((prev) => ({ ...prev, [name]: value }));
+  };
 
   const performCalculation = (data?: {
-    etfPrev: string
-    qqqPrev: string
-    qqqAfter: string
-    fxPrev: string
-    fxNow: string
-    etfCurrent: string
+    etfPrev: string;
+    qqqPrev: string;
+    qqqAfter: string;
+    fxPrev: string;
+    fxNow: string;
+    etfCurrent: string;
   }) => {
-    const source = data || inputs
+    const source = data || inputs;
 
-    const etfPrev = Number.parseFloat(source.etfPrev)
-    const qqqPrev = Number.parseFloat(source.qqqPrev)
-    const qqqAfter = Number.parseFloat(source.qqqAfter)
-    const fxPrev = Number.parseFloat(source.fxPrev)
-    const fxNow = Number.parseFloat(source.fxNow)
-    const etfCurrent = Number.parseFloat(source.etfCurrent)
+    const etfPrev = Number.parseFloat(source.etfPrev);
+    const qqqPrev = Number.parseFloat(source.qqqPrev);
+    const qqqAfter = Number.parseFloat(source.qqqAfter);
+    const fxPrev = Number.parseFloat(source.fxPrev);
+    const fxNow = Number.parseFloat(source.fxNow);
+    const etfCurrent = Number.parseFloat(source.etfCurrent);
 
-    if ([etfPrev, qqqPrev, qqqAfter, fxPrev, fxNow, etfCurrent].some((val) => isNaN(val) || val <= 0)) {
-      return false
+    if (
+      [etfPrev, qqqPrev, qqqAfter, fxPrev, fxNow, etfCurrent].some(
+        (val) => isNaN(val) || val <= 0,
+      )
+    ) {
+      return false;
     }
 
     // 1. Index Return
-    const qqqReturn = (qqqAfter - qqqPrev) / qqqPrev
+    const qqqReturn = (qqqAfter - qqqPrev) / qqqPrev;
 
     // 2. FX Return
-    const fxReturn = (fxNow - fxPrev) / fxPrev
+    const fxReturn = (fxNow - fxPrev) / fxPrev;
 
     // 3. Fair Value
-    const etfFair = etfPrev * (1 + qqqReturn) * (1 + fxReturn)
+    const etfFair = etfPrev * (1 + qqqReturn) * (1 + fxReturn);
 
     // 4. Premium/Discount
-    const premium = ((etfCurrent - etfFair) / etfFair) * 100
+    const premium = ((etfCurrent - etfFair) / etfFair) * 100;
 
     // 5. Signal
-    let signal: "BUY" | "SELL" | "HOLD" = "HOLD"
-    if (premium >= 1) signal = "SELL"
-    else if (premium <= -1) signal = "BUY"
+    let signal: "BUY" | "SELL" | "HOLD" = "HOLD";
+    if (premium >= 1) signal = "SELL";
+    else if (premium <= -1) signal = "BUY";
 
     setResult({
       qqqReturn,
@@ -139,25 +166,29 @@ export function EtfCalculator() {
       etfFair,
       premium,
       signal,
-    })
+    });
 
-    return true
-  }
+    return true;
+  };
 
   const calculate = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!performCalculation()) {
-      alert(t("invalidInput"))
+      alert(t("invalidInput"));
     }
-  }
+  };
 
   // Helper to format numbers
   const fmt = (num: number, decimals = 2) =>
-    num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
-  const fmtPct = (num: number) => `${(num * 100).toFixed(2)}%`
-  const fmtKrw = (num: number) => `₩${num.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+    num.toLocaleString(undefined, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  const fmtPct = (num: number) => `${(num * 100).toFixed(2)}%`;
+  const fmtKrw = (num: number) =>
+    `₩${num.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   const fmtUsd = (num: number) =>
-    `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <div className="space-y-6">
@@ -187,14 +218,18 @@ export function EtfCalculator() {
           <form onSubmit={calculate} className="space-y-6">
             <div className="flex flex-col gap-4 mb-4">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t("marketDataInputs")}</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  {t("marketDataInputs")}
+                </h2>
                 <button
                   type="button"
                   onClick={handleFetchData}
                   disabled={isLoading}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+                  />
                   {isLoading ? t("fetchingData") : t("autoFetchPrices")}
                 </button>
               </div>
@@ -212,31 +247,40 @@ export function EtfCalculator() {
                   className="w-full appearance-none rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-4 py-3 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 >
                   <optgroup label={t("nasdaq100Group")}>
-                    {ETF_OPTIONS.filter((e) => e.indexSymbol === "QQQ.O").map((etf) => (
-                      <option key={etf.id} value={etf.id}>
-                        {etf.name} ({etf.code})
-                      </option>
-                    ))}
+                    {ETF_OPTIONS.filter((e) => e.indexSymbol === "QQQ.O").map(
+                      (etf) => (
+                        <option key={etf.id} value={etf.id}>
+                          {etf.name} ({etf.code})
+                        </option>
+                      ),
+                    )}
                   </optgroup>
                   <optgroup label={t("sp500Group")}>
-                    {ETF_OPTIONS.filter((e) => e.indexSymbol === "SPY").map((etf) => (
-                      <option key={etf.id} value={etf.id}>
-                        {etf.name} ({etf.code})
-                      </option>
-                    ))}
+                    {ETF_OPTIONS.filter((e) => e.indexSymbol === "SPY").map(
+                      (etf) => (
+                        <option key={etf.id} value={etf.id}>
+                          {etf.name} ({etf.code})
+                        </option>
+                      ),
+                    )}
                   </optgroup>
                   <optgroup label={t("semiconductorGroup")}>
-                    {ETF_OPTIONS.filter((e) => e.indexSymbol === "SOXX.O").map((etf) => (
-                      <option key={etf.id} value={etf.id}>
-                        {etf.name} ({etf.code})
-                      </option>
-                    ))}
+                    {ETF_OPTIONS.filter((e) => e.indexSymbol === "SOXX.O").map(
+                      (etf) => (
+                        <option key={etf.id} value={etf.id}>
+                          {etf.name} ({etf.code})
+                        </option>
+                      ),
+                    )}
                   </optgroup>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                {t("baseIndex")}: <span className="font-medium text-gray-700 dark:text-gray-300">{selectedEtf.indexName}</span>
+                {t("baseIndex")}:{" "}
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  {selectedEtf.indexName}
+                </span>
               </p>
             </div>
 
@@ -245,8 +289,7 @@ export function EtfCalculator() {
               <div className="space-y-4">
                 <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
                   <span className="w-2 h-2 rounded-full bg-blue-500 mt-2"></span>
-                  {selectedEtf.name} <br />
-                  ({selectedEtf.code}.KS)
+                  {selectedEtf.name} <br />({selectedEtf.code}.KS)
                 </h3>
                 <div className="space-y-3">
                   <div>
@@ -380,7 +423,10 @@ export function EtfCalculator() {
 
       {/* Results Section */}
       {result && (
-        <div ref={resultRef} className="p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div
+          ref={resultRef}
+          className="p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
+        >
           {/* Signal Header */}
           <div
             className={`rounded-xl p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 border-2 ${
@@ -402,7 +448,9 @@ export function EtfCalculator() {
                 }`}
               >
                 {result.signal === "BUY" && <TrendingUp className="w-8 h-8" />}
-                {result.signal === "SELL" && <TrendingDown className="w-8 h-8" />}
+                {result.signal === "SELL" && (
+                  <TrendingDown className="w-8 h-8" />
+                )}
                 {result.signal === "HOLD" && <Minus className="w-8 h-8" />}
               </div>
               <div>
@@ -445,11 +493,15 @@ export function EtfCalculator() {
                 {/* Index Step */}
                 <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
                   <div className="flex justify-between text-gray-500 dark:text-gray-400 mb-2">
-                    <span>1. {selectedEtf.indexName.split(" ")[0]} {t("indexReturn")}</span>
+                    <span>
+                      1. {selectedEtf.indexName.split(" ")[0]}{" "}
+                      {t("indexReturn")}
+                    </span>
                     <span>{fmtPct(result.qqqReturn)}</span>
                   </div>
                   <div className="font-mono text-xs text-gray-600 dark:text-gray-300">
-                    ({fmtUsd(Number.parseFloat(inputs.qqqAfter))} - {fmtUsd(Number.parseFloat(inputs.qqqPrev))}) /{" "}
+                    ({fmtUsd(Number.parseFloat(inputs.qqqAfter))} -{" "}
+                    {fmtUsd(Number.parseFloat(inputs.qqqPrev))}) /{" "}
                     {fmtUsd(Number.parseFloat(inputs.qqqPrev))}
                   </div>
                 </div>
@@ -461,7 +513,8 @@ export function EtfCalculator() {
                     <span>{fmtPct(result.fxReturn)}</span>
                   </div>
                   <div className="font-mono text-xs text-gray-600 dark:text-gray-300">
-                    ({fmt(Number.parseFloat(inputs.fxNow))} - {fmt(Number.parseFloat(inputs.fxPrev))}) /{" "}
+                    ({fmt(Number.parseFloat(inputs.fxNow))} -{" "}
+                    {fmt(Number.parseFloat(inputs.fxPrev))}) /{" "}
                     {fmt(Number.parseFloat(inputs.fxPrev))}
                   </div>
                 </div>
@@ -469,7 +522,9 @@ export function EtfCalculator() {
                 {/* Final Formula */}
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 p-4 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold text-blue-900 dark:text-blue-100">3. {t("fairValue")}</span>
+                    <span className="font-semibold text-blue-900 dark:text-blue-100">
+                      3. {t("fairValue")}
+                    </span>
                     <span className="font-bold text-lg text-blue-700 dark:text-blue-300">
                       {fmtKrw(Math.round(result.etfFair))}
                     </span>
@@ -490,19 +545,25 @@ export function EtfCalculator() {
 
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
                 <div className="p-4 flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">{t("fairValue")}</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    {t("fairValue")}
+                  </span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {fmtKrw(Math.round(result.etfFair))}
                   </span>
                 </div>
                 <div className="p-4 flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">{t("currentMarketPrice")}</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    {t("currentMarketPrice")}
+                  </span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {fmtKrw(Number.parseFloat(inputs.etfCurrent))}
                   </span>
                 </div>
                 <div className="p-4 flex justify-between items-center bg-gray-50 dark:bg-gray-800/30">
-                  <span className="text-gray-600 dark:text-gray-400">{t("gap")}</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    {t("gap")}
+                  </span>
                   <span
                     className={`font-semibold ${
                       result.etfFair > Number.parseFloat(inputs.etfCurrent)
@@ -510,28 +571,46 @@ export function EtfCalculator() {
                         : "text-red-600"
                     }`}
                   >
-                    {fmtKrw(Number.parseFloat(inputs.etfCurrent) - Math.round(result.etfFair))}
+                    {fmtKrw(
+                      Number.parseFloat(inputs.etfCurrent) -
+                        Math.round(result.etfFair),
+                    )}
                   </span>
                 </div>
               </div>
 
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-sm text-gray-600 dark:text-gray-300">
-                <h4 className="font-semibold mb-2 text-gray-900 dark:text-gray-100">{t("marketInsight")}</h4>
+                <h4 className="font-semibold mb-2 text-gray-900 dark:text-gray-100">
+                  {t("marketInsight")}
+                </h4>
                 <ul className="list-disc list-inside space-y-1">
                   <li>
                     {selectedEtf.indexName.split(" ")[0]} {t("moved")}{" "}
-                    <span className={result.qqqReturn >= 0 ? "text-green-600" : "text-red-600"}>
-                      {result.qqqReturn >= 0 ? t("up") : t("down")} {fmtPct(Math.abs(result.qqqReturn))}
+                    <span
+                      className={
+                        result.qqqReturn >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }
+                    >
+                      {result.qqqReturn >= 0 ? t("up") : t("down")}{" "}
+                      {fmtPct(Math.abs(result.qqqReturn))}
                     </span>
                   </li>
                   <li>
                     USD/KRW {t("moved")}{" "}
-                    <span className={result.fxReturn >= 0 ? "text-green-600" : "text-red-600"}>
-                      {result.fxReturn >= 0 ? t("up") : t("down")} {fmtPct(Math.abs(result.fxReturn))}
+                    <span
+                      className={
+                        result.fxReturn >= 0 ? "text-green-600" : "text-red-600"
+                      }
+                    >
+                      {result.fxReturn >= 0 ? t("up") : t("down")}{" "}
+                      {fmtPct(Math.abs(result.fxReturn))}
                     </span>
                   </li>
                   <li>
-                    {t("etfShouldTrade")} {fmtKrw(Math.round(result.etfFair))}{t("shouldTradeAt")}
+                    {t("etfShouldTrade")} {fmtKrw(Math.round(result.etfFair))}
+                    {t("shouldTradeAt")}
                   </li>
                 </ul>
               </div>
@@ -551,6 +630,16 @@ export function EtfCalculator() {
           </div>
         </div>
       )}
+
+      {/* Premium History Chart - show after calculation */}
+      {result && (
+        <PremiumHistoryChart
+          etfId={selectedEtf.id}
+          etfName={selectedEtf.name}
+          currentPremium={result.premium}
+          locale={locale}
+        />
+      )}
     </div>
-  )
+  );
 }
