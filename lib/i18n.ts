@@ -122,3 +122,49 @@ export const translations = {
 } as const
 
 export type TranslationKey = keyof typeof translations.ko
+
+// Premium History Chart translations
+export const premiumChartTranslations = {
+  ko: {
+    title: "프리미엄 추이",
+    last30Days: "최근 약 30거래일",
+    loading: "프리미엄 이력을 불러오는 중...",
+    loadError: "프리미엄 이력을 불러오지 못했습니다.",
+    noData: "프리미엄 이력 데이터가 없습니다.",
+    premium: "프리미엄",
+    currentPosition: "현재 프리미엄 위치",
+    historicallyCheap: "역사적 저평가 구간",
+    historicallyExpensive: "역사적 고평가 구간",
+    historicallyNeutral: "중립 구간",
+    cheap: "저평가",
+    expensive: "고평가",
+    current: "현재",
+    average: "평균",
+    highest: "최고",
+    lowest: "최저",
+    cheapInterpretation: "현재 프리미엄({premium})은 최근 기간 중 하위 {percentile}% 수준입니다. ETF가 역사적으로 저평가 구간에 있어 매수 기회일 수 있습니다.",
+    expensiveInterpretation: "현재 프리미엄({premium})은 최근 기간 중 상위 {percentile}% 수준입니다. ETF가 역사적으로 고평가 구간에 있어 차익 실현을 고려해볼 수 있습니다.",
+    neutralInterpretation: "현재 프리미엄({premium})은 최근 기간 중 {percentile}% 수준으로 중립 구간에 있습니다. 프리미엄이 정상 범위 내에 있습니다.",
+  },
+  en: {
+    title: "Premium History",
+    last30Days: "Last ~30 trading days",
+    loading: "Loading premium history...",
+    loadError: "Failed to load premium history.",
+    noData: "No premium history data available.",
+    premium: "Premium",
+    currentPosition: "Current Premium Position",
+    historicallyCheap: "Historically Cheap",
+    historicallyExpensive: "Historically Expensive",
+    historicallyNeutral: "Neutral Zone",
+    cheap: "Cheap",
+    expensive: "Expensive",
+    current: "Current",
+    average: "Average",
+    highest: "Highest",
+    lowest: "Lowest",
+    cheapInterpretation: "Current premium ({premium}) is at the {percentile}th percentile of the recent range. The ETF is historically undervalued and may present a buying opportunity.",
+    expensiveInterpretation: "Current premium ({premium}) is at the {percentile}th percentile of the recent range. The ETF is historically overvalued. Consider taking profits.",
+    neutralInterpretation: "Current premium ({premium}) is at the {percentile}th percentile of the recent range. The premium is within normal bounds.",
+  },
+} as const
