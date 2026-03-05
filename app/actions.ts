@@ -167,36 +167,17 @@ interface ChartPoint {
 
 async function getNaverDomesticChart(code: string, count = 60): Promise<ChartPoint[]> {
   try {
-    // Uses fchart.stock.naver.com XML API (same as pandas-datareader)
-    const url = `https://fchart.stock.naver.com/sise.nhn?symbol=${code}&timeframe=day&count=${count}&requestType=0`
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Sec-Fetch-Mode": "no-cors",
-        "Referer": `https://finance.naver.com/item/fchart.nhn?code=${code}`,
-      },
-    })
+    const url = `https://m.stock.naver.com/api/stock/${code}/price?pageSize=${count}&page=1`
+    const res = await fetch(url, { headers: COMMON_HEADERS, next: { revalidate: 300 } })
     if (!res.ok) throw new Error(`Naver Domestic Chart API error: ${res.status}`)
-    const xml = await res.text()
+    const data = await res.json()
 
-    // Parse XML: <item data="20250301|85000|86000|84000|85500|1234567" />
-    const items: ChartPoint[] = []
-    const regex = /<item\s+data="([^"]+)"\s*\/>/g
-    let match: RegExpExecArray | null
-    while ((match = regex.exec(xml)) !== null) {
-      const parts = match[1].split("|")
-      if (parts.length >= 5) {
-        const dateStr = parts[0]
-        const close = Number.parseInt(parts[4], 10)
-        if (dateStr && close > 0) {
-          items.push({
-            date: `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`,
-            close,
-          })
-        }
-      }
-    }
-    return items
+    if (!Array.isArray(data)) throw new Error("Invalid chart data format")
+
+    return data.map((item: { localTradedAt: string; closePrice: string }) => ({
+      date: item.localTradedAt?.split("T")[0] || "",
+      close: parsePrice(item.closePrice),
+    })).filter((p: ChartPoint) => p.date && p.close > 0).reverse()
   } catch (e) {
     console.error(`Failed to fetch domestic chart (${code}):`, e)
     return []
@@ -205,35 +186,19 @@ async function getNaverDomesticChart(code: string, count = 60): Promise<ChartPoi
 
 async function getNaverOverseasChart(symbol: string, count = 60): Promise<ChartPoint[]> {
   try {
-    // Naver overseas stock uses api.stock.naver.com
-    // symbol format: "QQQ.O" for NASDAQ, "SPY" for NYSE
-    const url = `https://api.stock.naver.com/chart/foreign/item/${symbol}?periodType=dayCandle&count=${count}`
-    const res = await fetch(url, {
-      headers: {
-        ...COMMON_HEADERS,
-        Origin: "https://m.stock.naver.com",
-      },
-    })
-    if (!res.ok) {
-      const text = await res.text()
-      console.error(`[v0] Overseas chart response (${res.status}):`, text.slice(0, 200))
-      throw new Error(`Naver Overseas Chart API error: ${res.status}`)
-    }
+    const url = `https://api.stock.naver.com/chart/foreign/item/${symbol}?periodType=dayCandle&range=${count}`
+    const res = await fetch(url, { headers: COMMON_HEADERS, next: { revalidate: 300 } })
+    if (!res.ok) throw new Error(`Naver Overseas Chart API error: ${res.status}`)
     const data = await res.json()
 
-    console.log("[v0] Overseas chart raw sample:", JSON.stringify(data).slice(0, 500))
+    if (!Array.isArray(data)) throw new Error("Invalid overseas chart data format")
 
-    // Handle different response formats
-    const items = Array.isArray(data) ? data : (data?.priceInfos || data?.result || [])
-    if (!Array.isArray(items) || items.length === 0) throw new Error("Invalid overseas chart data format")
-
-    return items.map((item: Record<string, unknown>) => {
-      const dateRaw = (item.localDate || item.localTradedAt || item.date || "") as string
-      const dateStr = dateRaw.includes("-") ? dateRaw.split("T")[0] : dateRaw.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")
-      const closeRaw = item.closePrice ?? item.close ?? 0
-      const close = typeof closeRaw === "number" ? closeRaw : parsePrice(String(closeRaw))
-      return { date: dateStr, close }
-    }).filter((p: ChartPoint) => p.date && p.close > 0)
+    return data.map((item: { localDate: string; closePrice: string | number }) => ({
+      date: typeof item.localDate === "string"
+        ? item.localDate.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")
+        : "",
+      close: typeof item.closePrice === "number" ? item.closePrice : parsePrice(item.closePrice),
+    })).filter((p: ChartPoint) => p.date && p.close > 0)
   } catch (e) {
     console.error(`Failed to fetch overseas chart (${symbol}):`, e)
     return []
@@ -242,67 +207,20 @@ async function getNaverOverseasChart(symbol: string, count = 60): Promise<ChartP
 
 async function getNaverFxChart(count = 60): Promise<ChartPoint[]> {
   try {
-    // Use the same fchart XML API but for exchange rates via Naver
-    // Alternative: use polling.finance.naver.com for FX historical
-    const url = `https://polling.finance.naver.com/api/realtime/domestic/exchange/FX_USDKRW/chartdata?count=${count}`
-    const res = await fetch(url, {
-      headers: UNCOMMON_HEADERS,
-    })
-
-    if (!res.ok) {
-      // Fallback: try the marketIndex endpoint
-      console.error(`[v0] FX chart polling failed (${res.status}), trying fallback`)
-      return await getNaverFxChartFallback(count)
-    }
-
+    const url = `https://m.stock.naver.com/front-api/chart/marketIndex?category=exchange&reutersCode=FX_USDKRW&periodType=day&range=${count}`
+    const res = await fetch(url, { headers: COMMON_HEADERS, next: { revalidate: 300 } })
+    if (!res.ok) throw new Error(`Naver FX Chart API error: ${res.status}`)
     const json = await res.json()
-    console.log("[v0] FX chart raw sample:", JSON.stringify(json).slice(0, 500))
+    const data = json.result || []
 
-    const data = json?.result || json?.datas || json || []
-    if (!Array.isArray(data) || data.length === 0) {
-      return await getNaverFxChartFallback(count)
-    }
+    if (!Array.isArray(data)) throw new Error("Invalid FX chart data format")
 
-    return data.map((item: Record<string, unknown>) => {
-      const dateRaw = (item.localTradedAt || item.date || "") as string
-      const date = dateRaw.includes("T") ? dateRaw.split("T")[0] : dateRaw
-      const closeRaw = item.closePrice ?? item.basePrice ?? item.close ?? 0
-      const close = typeof closeRaw === "number" ? closeRaw : parsePrice(String(closeRaw))
-      return { date, close }
-    }).filter((p: ChartPoint) => p.date && p.close > 0)
+    return data.map((item: { localTradedAt: string; closePrice: string | number }) => ({
+      date: item.localTradedAt?.split("T")[0] || "",
+      close: typeof item.closePrice === "number" ? item.closePrice : parsePrice(item.closePrice),
+    })).filter((p: ChartPoint) => p.date && p.close > 0)
   } catch (e) {
-    console.error("Failed to fetch FX chart:", e)
-    return await getNaverFxChartFallback(count)
-  }
-}
-
-async function getNaverFxChartFallback(count = 60): Promise<ChartPoint[]> {
-  try {
-    // Fallback: use fchart for USD/KRW (symbol: USDKRW=X equivalent)
-    // Or use the marketIndex API with a different path
-    const url = `https://api.stock.naver.com/marketindex/exchange/FX_USDKRW/prices?page=1&pageSize=${count}`
-    const res = await fetch(url, { headers: COMMON_HEADERS })
-
-    if (!res.ok) {
-      console.error(`[v0] FX fallback also failed (${res.status})`)
-      return []
-    }
-
-    const json = await res.json()
-    console.log("[v0] FX fallback raw sample:", JSON.stringify(json).slice(0, 500))
-
-    const data = Array.isArray(json) ? json : (json?.result || json?.datas || [])
-    if (!Array.isArray(data)) return []
-
-    return data.map((item: Record<string, unknown>) => {
-      const dateRaw = (item.localTradedAt || item.date || item.localDate || "") as string
-      const date = dateRaw.includes("T") ? dateRaw.split("T")[0] : dateRaw
-      const closeRaw = item.closePrice ?? item.basePrice ?? item.tradedPrice ?? 0
-      const close = typeof closeRaw === "number" ? closeRaw : parsePrice(String(closeRaw))
-      return { date, close }
-    }).filter((p: ChartPoint) => p.date && p.close > 0).reverse()
-  } catch (e) {
-    console.error("Failed to fetch FX chart fallback:", e)
+    console.error(`Failed to fetch FX chart:`, e)
     return []
   }
 }
