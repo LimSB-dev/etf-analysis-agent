@@ -13,6 +13,15 @@ import {
   ChevronDown,
   Globe,
 } from "lucide-react";
+
+type MarketInputs = {
+  etfPrev: string;
+  qqqPrev: string;
+  qqqAfter: string;
+  fxPrev: string;
+  fxNow: string;
+  etfCurrent: string;
+};
 import { fetchMarketData } from "@/app/actions";
 import { ETF_OPTIONS, type EtfOption } from "@/lib/etf-options";
 import { useLocaleState } from "@/components/i18n-provider";
@@ -34,14 +43,16 @@ export function EtfCalculator() {
   const pageTitle = t("pageTitle");
   const pageDescription = t("pageDescription");
   const [selectedEtf, setSelectedEtf] = useState<EtfOption>(ETF_OPTIONS[0]);
-  const [inputs, setInputs] = useState({
+  const defaultInputs: MarketInputs = {
     etfPrev: "",
     qqqPrev: "",
     qqqAfter: "",
     fxPrev: "",
     fxNow: "",
     etfCurrent: "",
-  });
+  };
+
+  const [inputs, setInputs] = useState<MarketInputs>(defaultInputs);
 
   const [result, setResult] = useState<CalculationResult | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -50,14 +61,7 @@ export function EtfCalculator() {
     const etf = ETF_OPTIONS.find((o) => o.id === e.target.value);
     if (etf) {
       setSelectedEtf(etf);
-      setInputs({
-        etfPrev: "",
-        qqqPrev: "",
-        qqqAfter: "",
-        fxPrev: "",
-        fxNow: "",
-        etfCurrent: "",
-      });
+      setInputs(defaultInputs);
       setResult(null);
     }
   };
@@ -114,19 +118,7 @@ export function EtfCalculator() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setInputs((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const performCalculation = (data?: {
-    etfPrev: string;
-    qqqPrev: string;
-    qqqAfter: string;
-    fxPrev: string;
-    fxNow: string;
-    etfCurrent: string;
-  }) => {
+  const performCalculation = (data?: MarketInputs) => {
     const source = data || inputs;
 
     const etfPrev = Number.parseFloat(source.etfPrev);
@@ -172,13 +164,6 @@ export function EtfCalculator() {
     return true;
   };
 
-  const calculate = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!performCalculation()) {
-      alert(t("invalidInput"));
-    }
-  };
-
   // Helper to format numbers
   const fmt = (num: number, decimals = 2) =>
     num.toLocaleString(undefined, {
@@ -216,7 +201,7 @@ export function EtfCalculator() {
       <div className="bg-white dark:bg-gray-900 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
         {/* Input Section */}
         <div className="p-6 md:p-8 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-          <form onSubmit={calculate} className="space-y-6">
+          <div className="space-y-6">
             <div className="flex flex-col gap-4 mb-4">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
@@ -285,140 +270,65 @@ export function EtfCalculator() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Group 1: ETF Data */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-500 mt-2"></span>
-                  {selectedEtf.name} <br />({selectedEtf.code}.KS)
-                </h3>
+            {/* Fetched Data Display (Read-Only) */}
+            {inputs.etfPrev && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
+                {/* Group 1: ETF Data */}
                 <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t("prevClose")} (ETF_prev)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      name="etfPrev"
-                      value={inputs.etfPrev}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 85000"
-                      required
-                    />
+                  <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></span>
+                    {selectedEtf.name} ({selectedEtf.code}.KS)
+                  </h3>
+                  <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">{t("prevClose")}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmtKrw(Number.parseFloat(inputs.etfPrev))}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">{t("currentPrice")}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmtKrw(Number.parseFloat(inputs.etfCurrent))}</span>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t("currentPrice")} (ETF_current)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      name="etfCurrent"
-                      value={inputs.etfCurrent}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 86500"
-                      required
-                    />
+                </div>
+
+                {/* Group 2: Index Data */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
+                    <span className="w-2 h-2 rounded-full bg-purple-500 mt-1.5"></span>
+                    {selectedEtf.indexName} (USD)
+                  </h3>
+                  <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">{t("prevClose")}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmtUsd(Number.parseFloat(inputs.qqqPrev))}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">{t("lastClose")}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmtUsd(Number.parseFloat(inputs.qqqAfter))}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Group 3: FX Data */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 mt-1.5"></span>
+                    {t("exchangeRate")} (KRW/USD)
+                  </h3>
+                  <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">{t("prevRate")}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmt(Number.parseFloat(inputs.fxPrev))}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">{t("currentRate")}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmt(Number.parseFloat(inputs.fxNow))}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Group 2: Index Data */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-purple-500 mt-2"></span>
-                  {selectedEtf.indexName} <br />
-                  (USD)
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t("prevClose")} (Index_prev)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      name="qqqPrev"
-                      value={inputs.qqqPrev}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="e.g., 420.50"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t("lastClose")} (Index_after)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      name="qqqAfter"
-                      value={inputs.qqqAfter}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="e.g., 425.20"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Group 3: FX Data */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500 mt-2"></span>
-                  {t("exchangeRate")} <br />
-                  (KRW/USD)
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t("prevRate")} (FX_prev)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      name="fxPrev"
-                      value={inputs.fxPrev}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="e.g., 1350.00"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t("currentRate")} (FX_now)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      name="fxNow"
-                      value={inputs.fxNow}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="e.g., 1355.50"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-4">
-              <button
-                type="submit"
-                className="inline-flex items-center justify-center gap-2 rounded-md bg-gray-900 px-8 py-3 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:bg-gray-50 dark:text-gray-900 dark:hover:bg-gray-200 w-full md:w-auto transition-colors"
-              >
-                <Calculator className="w-4 h-4" />
-                {t("calculateFairValue")}
-              </button>
-            </div>
-          </form>
+            )}
+          </div>
         </div>
       </div>
 
@@ -616,18 +526,6 @@ export function EtfCalculator() {
                 </ul>
               </div>
             </div>
-          </div>
-
-          {/* 안내문 */}
-          <div className="mt-8 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 text-sm text-amber-900 dark:text-amber-200">
-            <p className="font-medium mb-2">{t("noticeTitle")}</p>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-              {t("noticeLine1")}
-              <br />
-              {t("noticeLine2")}
-              <br />
-              {t("noticeLine3")}
-            </p>
           </div>
         </div>
       )}
