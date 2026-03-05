@@ -79,5 +79,10 @@
   "tradingAtDiscount": "시장가가 NAV 대비 저평가",
   "reference": "참고",
   "premiumTrendTab": "프리미엄 추이",
-  "strategySimulationTab": "전략 시뮬레이션"
+  "strategySimulationTab": "전략 시뮬레이션",
+  "themeLight": "라이트",
+  "themeDark": "다크",
+  "themeSystem": "시스템",
+  "themeToggleLabel": "테마 변경",
+  "themeToggleClickHint": "클릭 시 순서대로 전환"
 }

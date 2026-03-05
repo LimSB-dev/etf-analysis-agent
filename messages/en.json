@@ -79,5 +79,10 @@
   "tradingAtDiscount": "Trading at discount vs NAV",
   "reference": "Reference",
   "premiumTrendTab": "Premium Trend",
-  "strategySimulationTab": "Strategy Simulation"
+  "strategySimulationTab": "Strategy Simulation",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System",
+  "themeToggleLabel": "Change theme",
+  "themeToggleClickHint": "Click to cycle theme"
 }
