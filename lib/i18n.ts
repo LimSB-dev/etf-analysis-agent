@@ -63,7 +63,7 @@ export const translations = {
     someDataMissing:
       "일부 데이터를 자동으로 가져올 수 없습니다. 누락된 값을 직접 입력해주세요.",
     fetchFailed:
-      "시장 데이터를 가져오지 못했습니다. 다시 시도하거나 직접 입력해주세요.",
+      "시장 데이터를 가져오지 못했습니다. 다시 시도해주세요.",
     invalidInput: "모든 필드에 유효한 양수를 입력해주세요.",
   },
   en: {
@@ -127,7 +127,7 @@ export const translations = {
     someDataMissing:
       "Some data could not be fetched automatically. Please enter the missing values manually.",
     fetchFailed:
-      "Failed to fetch market data. Please try again or enter manually.",
+      "Failed to fetch market data. Please try again.",
     invalidInput: "Please enter valid positive numbers for all fields.",
   },
 } as const;
