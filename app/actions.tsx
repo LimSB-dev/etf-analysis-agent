@@ -242,54 +242,19 @@ async function getNaverOverseasChart(symbol: string, count = 60): Promise<ChartP
 
 async function getNaverFxChart(count = 60): Promise<ChartPoint[]> {
   try {
-    // Use the same fchart XML API but for exchange rates via Naver
-    // Alternative: use polling.finance.naver.com for FX historical
-    const url = `https://polling.finance.naver.com/api/realtime/domestic/exchange/FX_USDKRW/chartdata?count=${count}`
-    const res = await fetch(url, {
-      headers: UNCOMMON_HEADERS,
-    })
-
-    if (!res.ok) {
-      // Fallback: try the marketIndex endpoint
-      console.error(`[v0] FX chart polling failed (${res.status}), trying fallback`)
-      return await getNaverFxChartFallback(count)
-    }
-
-    const json = await res.json()
-    console.log("[v0] FX chart raw sample:", JSON.stringify(json).slice(0, 500))
-
-    const data = json?.result || json?.datas || json || []
-    if (!Array.isArray(data) || data.length === 0) {
-      return await getNaverFxChartFallback(count)
-    }
-
-    return data.map((item: Record<string, unknown>) => {
-      const dateRaw = (item.localTradedAt || item.date || "") as string
-      const date = dateRaw.includes("T") ? dateRaw.split("T")[0] : dateRaw
-      const closeRaw = item.closePrice ?? item.basePrice ?? item.close ?? 0
-      const close = typeof closeRaw === "number" ? closeRaw : parsePrice(String(closeRaw))
-      return { date, close }
-    }).filter((p: ChartPoint) => p.date && p.close > 0)
-  } catch (e) {
-    console.error("Failed to fetch FX chart:", e)
-    return await getNaverFxChartFallback(count)
-  }
-}
-
-async function getNaverFxChartFallback(count = 60): Promise<ChartPoint[]> {
-  try {
-    // Fallback: use fchart for USD/KRW (symbol: USDKRW=X equivalent)
-    // Or use the marketIndex API with a different path
-    const url = `https://api.stock.naver.com/marketindex/exchange/FX_USDKRW/prices?page=1&pageSize=${count}`
+    // api.stock.naver.com/marketindex/exchange has a max pageSize of 60
+    const pageSize = Math.min(count, 60)
+    const url = `https://api.stock.naver.com/marketindex/exchange/FX_USDKRW/prices?page=1&pageSize=${pageSize}`
     const res = await fetch(url, { headers: COMMON_HEADERS })
 
     if (!res.ok) {
-      console.error(`[v0] FX fallback also failed (${res.status})`)
+      const body = await res.text()
+      console.error(`[v0] FX chart failed (${res.status}):`, body.slice(0, 200))
       return []
     }
 
     const json = await res.json()
-    console.log("[v0] FX fallback raw sample:", JSON.stringify(json).slice(0, 500))
+    console.log("[v0] FX chart raw sample:", JSON.stringify(json).slice(0, 500))
 
     const data = Array.isArray(json) ? json : (json?.result || json?.datas || [])
     if (!Array.isArray(data)) return []
@@ -302,7 +267,7 @@ async function getNaverFxChartFallback(count = 60): Promise<ChartPoint[]> {
       return { date, close }
     }).filter((p: ChartPoint) => p.date && p.close > 0).reverse()
   } catch (e) {
-    console.error("Failed to fetch FX chart fallback:", e)
+    console.error("Failed to fetch FX chart:", e)
     return []
   }
 }
