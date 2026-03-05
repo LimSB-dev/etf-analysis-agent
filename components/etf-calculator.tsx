@@ -12,6 +12,9 @@ import {
   RefreshCw,
   ChevronDown,
   Globe,
+  Bell,
+  Github,
+  Mail,
 } from "lucide-react";
 
 type MarketInputs = {
@@ -827,6 +830,41 @@ export function EtfCalculator() {
               locale={locale}
             />
           ) : null}
+        </div>
+      )}
+
+      {/* Real-time Alert CTA */}
+      {hasCalculated && result && (
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl border-2 border-blue-200 dark:border-blue-800 p-8 text-center animate-in fade-in duration-500">
+          <div className="flex justify-center mb-4">
+            <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/40">
+              <Bell className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            {t("realtimeAlertTitle")}
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 max-w-2xl mx-auto">
+            {t("realtimeAlertDesc")}
+          </p>
+          <div className="flex gap-4 justify-center items-center">
+            <a
+              href="https://github.com/LimSB-dev/v0-etf-analysis-agent/issues/new?title=%EC%8B%A4%EC%8B%9C%EA%B0%84+%EC%95%8C%EB%9E%8C+%EA%B8%B0%EB%8A%A5+%EC%9A%94%EC%B2%AD&body=%EC%8B%A4%EC%8B%9C%EA%B0%84+%EB%A7%A4%EC%88%98%2F%EB%A7%A4%EB%8F%84+%EC%95%8C%EB%9E%8C+%EA%B8%B0%EB%8A%A5%EC%9D%84+%EC%9B%90%ED%95%A9%EB%8B%88%EB%8B%A4."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 text-sm font-medium transition-colors"
+            >
+              <Github className="w-4 h-4" />
+              <span>GitHub</span>
+            </a>
+            <a
+              href="mailto:mae03087@naver.com?subject=%EC%8B%A4%EC%8B%9C%EA%B0%84%20ETF%20%EC%95%8C%EB%9E%8C%20%EA%B8%B0%EB%8A%A5%20%EC%9A%94%EC%B2%AD&body=%EC%8B%A4%EC%8B%9C%EA%B0%84%20%EB%A7%A4%EC%88%98/%EB%A7%A4%EB%8F%84%20%EC%95%8C%EB%9E%8C%20%EA%B8%B0%EB%8A%A5%EC%9D%84%20%EC%9B%90%ED%95%A9%EB%8B%88%EB%8B%A4."
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm font-medium transition-colors border border-gray-300 dark:border-gray-700"
+            >
+              <Mail className="w-4 h-4" />
+              <span>{locale === "ko" ? "이메일" : "Email"}</span>
+            </a>
+          </div>
         </div>
       )}
     </div>

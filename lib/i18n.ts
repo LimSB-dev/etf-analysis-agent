@@ -3,14 +3,16 @@ export type Locale = "ko" | "en";
 export const translations = {
   ko: {
     // Page Title
-    pageTitle: "ETF 적정가 계산기",
+    pageTitle: "ETF 프리미엄 분석 플랫폼",
     pageDescription:
-      "한국 상장 미국 ETF의 적정가를 계산하고 매수/매도 신호를 확인하세요.",
+      "한국 상장 미국 ETF의 적정가, 프리미엄 추이, 매매 전략을 종합 분석합니다.",
+    realtimeAlertTitle: "실시간 매수/매도 알람이 필요하신가요?",
+    realtimeAlertDesc: "프리미엄 기준 도달 시 알람을 받고 싶다면 아래 버튼을 클릭해주세요. 수요가 충분하면 기능을 추가하겠습니다.",
 
     // Header
     marketDataInputs: "시장 데이터 입력",
-    fetchingData: "데이터 가져오는 중...",
-    autoFetchPrices: "가격 자동 가져오기",
+    fetchingData: "시세 조회 중...",
+    autoFetchPrices: "실시간 시세 조회",
     selectEtf: "분석할 ETF 선택",
     baseIndex: "기초지수",
 
@@ -68,14 +70,16 @@ export const translations = {
   },
   en: {
     // Page Title
-    pageTitle: "ETF Fair Value Calculator",
+    pageTitle: "ETF Premium Analysis Platform",
     pageDescription:
-      "Calculate fair value of Korea-listed US ETFs and get buy/sell signals.",
+      "Comprehensive analysis of fair value, premium trends, and trading strategies for Korea-listed US ETFs.",
+    realtimeAlertTitle: "Want real-time buy/sell alerts?",
+    realtimeAlertDesc: "Click below if you'd like to receive alerts when premium thresholds are met. We'll add this feature if there's enough demand.",
 
     // Header
     marketDataInputs: "Market Data Inputs",
-    fetchingData: "Fetching Data...",
-    autoFetchPrices: "Auto-Fetch Prices",
+    fetchingData: "Fetching Prices...",
+    autoFetchPrices: "Fetch Latest Prices",
     selectEtf: "Select ETF to Analyze",
     baseIndex: "Base Index",
 
