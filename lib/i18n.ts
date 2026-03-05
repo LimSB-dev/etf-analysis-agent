@@ -5,9 +5,18 @@ export const translations = {
     // Page Title
     pageTitle: "ETF 프리미엄 분석 플랫폼",
     pageDescription:
-      "한국 상장 미국 ETF의 적정가, 프리미엄 추이, 매매 전략을 종합 분석합니다.",
+      "한국 상장 미국 ETF의 프리미엄 추이, 매매 전략을 종합 분석합니다.",
     realtimeAlertTitle: "실시간 매수/매도 알람이 필요하신가요?",
-    realtimeAlertDesc: "프리미엄 기준 도달 시 알람을 받고 싶다면 아래 버튼을 클릭해주세요. 수요가 충분하면 기능을 추가하겠습니다.",
+    realtimeAlertDesc: "프리미엄 기준 도달 시 알람을 받고 싶다면 아래 버튼을 클릭해 주세요. 수요가 충분하면 기능을 추가하겠습니다.",
+    realtimeAlertCta: "알람 신청하기",
+    alertRequestIssueTitle: "실시간 알람 기능 요청",
+    alertRequestIssueBody: "실시간 매수/매도 알람 기능을 원합니다.\n\n희망하는 알람 방식:\n- [ ] 이메일\n- [ ] 모바일 앱 푸시\n- [ ] 카카오톡/텔레그램\n- [ ] 기타:",
+    alertRequestEmailSubject: "실시간 알람 기능 요청",
+    alertRequestEmailBody: "실시간 매수/매도 알람 기능을 원합니다. 희망하는 알람 방식: 이메일 / 모바일 앱 푸시 / 카카오톡·텔레그램 / 기타",
+    alertRequestViaIssue: "GitHub 이슈로 신청",
+    alertRequestViaEmail: "메일로 신청",
+    gitIssue: "GitHub 이슈",
+    contactEmail: "메일 보내기",
 
     // Header
     premiumAnalysis: "프리미엄 분석",
@@ -25,13 +34,14 @@ export const translations = {
     // Input Labels
     prevClose: "전일 종가",
     currentPrice: "현재가",
+    priceAfterMarketClose: "장 마감 종가",
     lastClose: "최근 종가",
     prevRate: "전일 환율",
     currentRate: "현재 환율",
     exchangeRate: "환율",
 
     // Button
-    calculateFairValue: "적정가 계산",
+    calculateFairValue: "프리미엄 분석",
 
     // Signal
     signal: "신호",
@@ -47,8 +57,8 @@ export const translations = {
     currentPremium: "현재 프리미엄",
 
     // Calculation
-    fairValueCalculation: "적정가 계산",
-    fairValue: "적정가",
+    fairValueCalculation: "프리미엄 분석",
+    fairValue: "추정 가격",
     indexReturn: "수익률",
     indexReturnDesc: "당일 지수 수익률",
     fxReturn: "환율 변동률",
@@ -79,6 +89,10 @@ export const translations = {
     fairPriceEnd: "입니다",
     iNavDisclaimer: "이 값은 전일 NAV, 기초 ETF 수익률, 환율 변동을 기반으로 계산된 실시간 추정 가격입니다.",
 
+    // Optional tabs (재미 + 정보)
+    premiumTrendTab: "프리미엄 추이",
+    strategySimulationTab: "전략 시뮬레이션",
+
     // Market Insight
     marketInsight: "시장 인사이트",
     moved: "변동",
@@ -101,9 +115,18 @@ export const translations = {
     // Page Title
     pageTitle: "ETF Premium Analysis Platform",
     pageDescription:
-      "Comprehensive analysis of fair value, premium trends, and trading strategies for Korea-listed US ETFs.",
+      "Comprehensive analysis of premium trends and trading strategies for Korea-listed US ETFs.",
     realtimeAlertTitle: "Want real-time buy/sell alerts?",
     realtimeAlertDesc: "Click below if you'd like to receive alerts when premium thresholds are met. We'll add this feature if there's enough demand.",
+    realtimeAlertCta: "Get Alerts",
+    alertRequestIssueTitle: "Request: Real-time alert feature",
+    alertRequestIssueBody: "I would like real-time buy/sell alert feature.\n\nDesired alert methods:\n- [ ] Email\n- [ ] Mobile app push\n- [ ] KakaoTalk/Telegram\n- [ ] Other:",
+    alertRequestEmailSubject: "Request: Real-time alert feature",
+    alertRequestEmailBody: "I would like real-time buy/sell alert feature. Desired methods: Email / Mobile app push / KakaoTalk or Telegram / Other",
+    alertRequestViaIssue: "Request via GitHub Issue",
+    alertRequestViaEmail: "Request via Email",
+    gitIssue: "GitHub Issue",
+    contactEmail: "Contact",
 
     // Header
     premiumAnalysis: "Real-Time Analysis",
@@ -121,13 +144,14 @@ export const translations = {
     // Input Labels
     prevClose: "Prev Close",
     currentPrice: "Current Price",
+    priceAfterMarketClose: "Closing Price",
     lastClose: "Last Close",
     prevRate: "Prev Rate",
     currentRate: "Current Rate",
     exchangeRate: "Exchange Rate",
 
     // Button
-    calculateFairValue: "Calculate Fair Value",
+    calculateFairValue: "Premium Analysis",
 
     // Signal
     signal: "Signal",
@@ -142,8 +166,8 @@ export const translations = {
     currentPremium: "Current Premium",
 
     // Calculation
-    fairValueCalculation: "Fair Value Calculation",
-    fairValue: "Fair Value",
+    fairValueCalculation: "Premium Analysis",
+    fairValue: "Estimated Price",
     indexReturn: "Return",
     indexReturnDesc: "Daily index return",
     fxReturn: "FX Return",
@@ -173,6 +197,10 @@ export const translations = {
     fairPriceIs: "'s real-time estimated price is",
     fairPriceEnd: "",
     iNavDisclaimer: "This value is a real-time estimated price calculated based on previous day's NAV, underlying ETF returns, and FX changes.",
+
+    // Optional tabs
+    premiumTrendTab: "Premium Trend",
+    strategySimulationTab: "Strategy Simulation",
 
     // Market Insight
     marketInsight: "Market Insight",
@@ -216,11 +244,11 @@ export const premiumChartTranslations = {
     highest: "최고",
     lowest: "최저",
     cheapInterpretation:
-      "현재 프리미엄({premium})은 최근 기간 중 하위 {percentile}% 수준입니다. ETF가 역사적으로 저평가 구간에 있어 매수 기회일 수 있습니다.",
+      "현재 프리미엄({premium})은 최근 기간 중 하위 {percentile}% 수준입니다.",
     expensiveInterpretation:
-      "현재 프리미엄({premium})은 최근 기간 중 상위 {percentile}% 수준입니다. ETF가 역사적으로 고평가 구간에 있어 차익 실현을 고려해볼 수 있습니다.",
+      "현재 프리미엄({premium})은 최근 기간 중 상위 {percentile}% 수준입니다.",
     neutralInterpretation:
-      "현재 프리미엄({premium})은 최근 기간 중 {percentile}% 수준으로 중립 구간에 있습니다. 프리미엄이 정상 범위 내에 있습니다.",
+      "현재 프리미엄({premium})은 최근 기간 중 {percentile}% 수준으로 중립 구간에 있습니다.",
   },
   en: {
     title: "Premium History",
@@ -240,10 +268,10 @@ export const premiumChartTranslations = {
     highest: "Highest",
     lowest: "Lowest",
     cheapInterpretation:
-      "Current premium ({premium}) is at the {percentile}th percentile of the recent range. The ETF is historically undervalued and may present a buying opportunity.",
+      "Current premium ({premium}) is in the lower {percentile}% of the recent range.",
     expensiveInterpretation:
-      "Current premium ({premium}) is at the {percentile}th percentile of the recent range. The ETF is historically overvalued. Consider taking profits.",
+      "Current premium ({premium}) is in the upper {percentile}% of the recent range.",
     neutralInterpretation:
-      "Current premium ({premium}) is at the {percentile}th percentile of the recent range. The premium is within normal bounds.",
+      "Current premium ({premium}) is at the {percentile}th percentile of the recent range.",
   },
 } as const;

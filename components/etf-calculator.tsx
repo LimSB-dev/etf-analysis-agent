@@ -12,6 +12,9 @@ import {
   ChevronDown,
   Globe,
   Info,
+  Bell,
+  Github,
+  Mail,
 } from "lucide-react";
 
 type MarketInputs = {
@@ -26,6 +29,9 @@ type MarketInputs = {
 import { fetchMarketData } from "@/app/actions";
 import { ETF_OPTIONS, type EtfOption } from "@/lib/etf-options";
 import { useLocaleState } from "@/components/i18n-provider";
+import { PremiumHistoryChart } from "@/components/premium-history-chart";
+import { StrategySimulation } from "@/components/strategy-simulation";
+import { getAlertRequestIssueUrl, getAlertRequestMailto } from "@/lib/site-config";
 
 type CalculationResult = {
   qqqReturn: number;
@@ -41,7 +47,6 @@ export function EtfCalculator() {
   const { locale, setLocale } = useLocaleState();
   const [isLoading, setIsLoading] = useState(false);
   const pageTitle = t("pageTitle");
-  const pageDescription = t("pageDescription");
   const [selectedEtf, setSelectedEtf] = useState<EtfOption>(ETF_OPTIONS[0]);
   const defaultInputs: MarketInputs = {
     etfPrev: "",
@@ -60,6 +65,43 @@ export function EtfCalculator() {
   const etfSelectorRef = useRef<HTMLDivElement>(null);
   const [showSticky, setShowSticky] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [isKoreanMarketOpen, setIsKoreanMarketOpen] = useState(true);
+  type ExtraTabType = "premium" | "strategy" | null;
+  const [extraTab, setExtraTab] = useState<ExtraTabType>(null);
+
+  useEffect(() => {
+    const check = () => {
+      const now = new Date();
+      const utcHour = now.getUTCHours();
+      const utcMin = now.getUTCMinutes();
+      const utcDay = now.getUTCDay();
+      const kstHour = (utcHour + 9) % 24;
+      const kstMin = utcMin;
+      const dayOffset = utcHour + 9 >= 24 ? 1 : 0;
+      const kstDay = (utcDay + dayOffset) % 7;
+      const isWeekend = kstDay === 0 || kstDay === 6;
+      if (isWeekend) {
+        setIsKoreanMarketOpen(false);
+        return;
+      }
+      if (kstHour < 9) {
+        setIsKoreanMarketOpen(false);
+        return;
+      }
+      if (kstHour > 15) {
+        setIsKoreanMarketOpen(false);
+        return;
+      }
+      if (kstHour === 15 && kstMin >= 30) {
+        setIsKoreanMarketOpen(false);
+        return;
+      }
+      setIsKoreanMarketOpen(true);
+    };
+    check();
+    const interval = setInterval(check, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleEtfChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const etf = ETF_OPTIONS.find((o) => o.id === e.target.value);
@@ -128,7 +170,10 @@ export function EtfCalculator() {
 
   const handleFetchData = async () => {
     setIsLoading(true);
-    setResult(null);
+    // 재조회 시 깜빡임 방지: 이전 결과는 유지하고, 스켈레톤은 첫 조회(!inputs.etfPrev)일 때만 표시
+    if (!inputs.etfPrev) {
+      setResult(null);
+    }
     try {
       const data = await fetchMarketData(selectedEtf.id);
 
@@ -303,32 +348,30 @@ export function EtfCalculator() {
         </div>
       </div>
 
-      {/* Page Title */}
-      <div className="text-center">
-        <div className="flex justify-center items-center gap-3 mb-3">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl">
+      {/* Page Title - 좌측 정렬, i18n은 우측 상단 */}
+      <div className="relative flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 pb-2">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl">
             {pageTitle}
           </h1>
-          <button
-            type="button"
-            onClick={() => setLocale(locale === "ko" ? "en" : "ko")}
-            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            <Globe className="w-3 h-3" />
-            {locale === "ko" ? "EN" : "KO"}
-          </button>
         </div>
-        <p className="text-lg text-gray-600 dark:text-gray-400">
-          {pageDescription}
-        </p>
+        <button
+          type="button"
+          onClick={() => setLocale(locale === "ko" ? "en" : "ko")}
+          className="self-start inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-800/80 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300 transition-colors shrink-0"
+          aria-label={locale === "ko" ? "Switch to English" : "한국어로 전환"}
+        >
+          <Globe className="w-2.5 h-2.5 opacity-80" />
+          {locale === "ko" ? "EN" : "KO"}
+        </button>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800" style={{ scrollSnapAlign: "start" }}>
+      <div className="bg-white dark:bg-gray-900 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
         {/* Input Section */}
         <div className="p-6 md:p-8 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
           <div className="space-y-6">
             <div className="flex flex-col gap-4 mb-4">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="flex flex-row justify-between items-center gap-4">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                   {t("premiumAnalysis")}
                 </h2>
@@ -336,7 +379,7 @@ export function EtfCalculator() {
                   type="button"
                   onClick={handleFetchData}
                   disabled={isLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                 >
                   <RefreshCw
                     className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
@@ -395,27 +438,44 @@ export function EtfCalculator() {
               </p>
             </div>
 
-            {/* Fetched Data Display (Read-Only) - Loading Skeleton */}
+            {/* Fetched Data Display - Loading Skeleton (첫 조회 시에만, 재조회 시에는 이전 콘텐츠 유지) */}
             {isLoading && !inputs.etfPrev && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-300">
-                {[1, 2].map((i) => (
-                  <div key={i} className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
-                    <div className="flex items-center gap-2 mb-3 justify-center">
-                      <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+                      <div className="flex items-center gap-2 mb-3 justify-center">
+                        <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                      </div>
+                      <div className="text-center">
+                        <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse mx-auto" />
+                        <div className="h-8 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse mx-auto" />
-                      <div className="h-8 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
+                  ))}
+                </div>
+                <div className="rounded-xl p-6 border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 animate-pulse">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700" />
+                      <div className="space-y-2">
+                        <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+                        <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
+                      </div>
+                    </div>
+                    <div className="bg-white dark:bg-gray-900 rounded-xl px-8 py-5 border border-gray-200 dark:border-gray-700">
+                      <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-2 mx-auto" />
+                      <div className="h-12 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
             )}
 
-            {/* Fetched Data Display (Read-Only) */}
-            {inputs.etfPrev && !isLoading && (
+            {/* Fetched Data Display (Read-Only) - 데이터 표시 (재조회 중에는 이전 데이터 유지) */}
+            {inputs.etfPrev && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-300">
+                <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${!isLoading ? "animate-in fade-in duration-200" : ""}`}>
                   {/* Group 1: ETF Current Price */}
                   <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
                     <div className="flex items-center gap-2 mb-3">
@@ -426,7 +486,7 @@ export function EtfCalculator() {
                     </div>
                     <div className="text-center">
                       <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                        {t("currentPrice")}
+                        {isKoreanMarketOpen ? t("currentPrice") : t("priceAfterMarketClose")}
                       </div>
                       <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                         {fmtKrw(Number.parseFloat(inputs.etfCurrent))}
@@ -460,37 +520,17 @@ export function EtfCalculator() {
                   </div>
                 </div>
 
-                {/* Signal Card - 매수/매도/보유 (Loading) */}
-                {isLoading && (
-                  <div className="rounded-xl p-6 border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 animate-pulse">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700" />
-                        <div className="space-y-2">
-                          <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-                          <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
-                        </div>
-                      </div>
-                      <div className="bg-white dark:bg-gray-900 rounded-xl px-8 py-5 border border-gray-200 dark:border-gray-700">
-                        <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-2 mx-auto" />
-                        <div className="h-12 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Signal Card - 매수/매도/보유 */}
-                {result && !isLoading && (
+                {result && (
                   <div
                     ref={resultRef}
-                    className={`rounded-xl p-6 animate-in fade-in duration-500 border-2 ${
+                    className={`rounded-xl p-6 animate-in fade-in duration-200 border-2 ${
                       result.signal === "BUY"
                         ? "bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 dark:from-green-950/40 dark:to-emerald-950/40 dark:border-green-700"
                         : result.signal === "SELL"
                           ? "bg-gradient-to-br from-red-50 to-rose-50 border-red-300 dark:from-red-950/40 dark:to-rose-950/40 dark:border-red-700"
                           : "bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300 dark:from-yellow-950/40 dark:to-orange-950/40 dark:border-yellow-700"
                     }`}
-                    style={{ scrollMarginTop: "80px" }}
                   >
                     <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                       {/* Signal Icon + Text */}
@@ -689,6 +729,89 @@ export function EtfCalculator() {
         </div>
       </div>
 
+      {/* 재미 + 정보: 칩 탭 (실시간 데이터 조회 후에만 표시) */}
+      {inputs.etfPrev && (
+      <div className="mt-8">
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => setExtraTab(extraTab === "premium" ? null : "premium")}
+            className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              extraTab === "premium"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+            }`}
+          >
+            {t("premiumTrendTab")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setExtraTab(extraTab === "strategy" ? null : "strategy")}
+            className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              extraTab === "strategy"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+            }`}
+          >
+            {t("strategySimulationTab")}
+          </button>
+        </div>
+        {extraTab === "premium" && (
+          <PremiumHistoryChart
+            etfId={selectedEtf.id}
+            etfName={selectedEtf.name}
+            currentPremium={result?.premium}
+            locale={locale}
+          />
+        )}
+        {extraTab === "strategy" && (
+          <StrategySimulation
+            etfId={selectedEtf.id}
+            etfName={selectedEtf.name}
+            locale={locale}
+          />
+        )}
+      </div>
+      )}
+
+      {/* 하단 배너: 알람 신청 CTA (실시간 데이터 조회 후에만 표시) */}
+      {inputs.etfPrev && (
+      <section className="mt-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 p-6 sm:p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex items-start gap-4 min-w-0">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+              <Bell className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-base sm:text-lg">
+                {t("realtimeAlertTitle")}
+              </h3>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line">
+                {t("realtimeAlertDesc")}
+              </p>
+            </div>
+          </div>
+          <div className="flex w-full justify-center gap-2 shrink-0 sm:w-auto sm:justify-end">
+            <a
+              href={getAlertRequestIssueUrl(t("alertRequestIssueTitle"), t("alertRequestIssueBody"))}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 transition-opacity"
+              aria-label={t("alertRequestViaIssue")}
+            >
+              <Github className="w-5 h-5" />
+            </a>
+            <a
+              href={getAlertRequestMailto(t("alertRequestEmailSubject"), t("alertRequestEmailBody"))}
+              className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              aria-label={t("alertRequestViaEmail")}
+            >
+              <Mail className="w-5 h-5" />
+            </a>
+          </div>
+        </div>
+      </section>
+      )}
 
     </div>
   );

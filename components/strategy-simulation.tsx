@@ -334,7 +334,7 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
               type="button"
               onClick={handleRun}
               disabled={isLoading}
-              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed sm:w-auto"
+              className="inline-flex items-center justify-center gap-2 w-[12rem] px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
