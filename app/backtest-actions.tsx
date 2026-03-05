@@ -167,21 +167,37 @@ async function getNaverFxChartPaginated(totalCount: number): Promise<ChartPoint[
 // --- Period mapping ---
 type Period = "1m" | "3m" | "6m"
 
+function getMonthsForPeriod(period: Period): number {
+  switch (period) {
+    case "1m":
+      return 1
+    case "3m":
+      return 3
+    case "6m":
+      return 6
+  }
+}
+
 function getTradingDaysForPeriod(period: Period): number {
   switch (period) {
     case "1m":
-      return 25
+      return 30
     case "3m":
-      return 70
+      return 90
     case "6m":
-      return 135
+      return 180
   }
 }
 
 // --- Main backtest function ---
-export async function runBacktest(etfId: string, period: Period): Promise<BacktestResult> {
+export async function runBacktest(
+  etfId: string, 
+  period: Period,
+  buyThreshold: number = -1,
+  sellThreshold: number = 1
+): Promise<BacktestResult> {
   const selectedEtf = ETF_OPTIONS.find((e) => e.id === etfId) || ETF_OPTIONS[0]
-  const days = getTradingDaysForPeriod(period) + 5 // extra for prev-day calc
+  const days = getTradingDaysForPeriod(period) + 10 // extra buffer for calendar-based filtering
 
   const [etfChart, indexChart, fxChart] = await Promise.all([
     getNaverDomesticChart(selectedEtf.code, days),
@@ -266,6 +282,41 @@ export async function runBacktest(etfId: string, period: Period): Promise<Backte
     }
   }
 
+  // Filter by actual calendar months, not trading days
+  const endDate = new Date(dailyData[dailyData.length - 1].date)
+  const startDate = new Date(endDate)
+  const monthsToSubtract = getMonthsForPeriod(period)
+  startDate.setMonth(startDate.getMonth() - monthsToSubtract)
+  
+  const trimmedData = dailyData.filter((d) => {
+    const date = new Date(d.date)
+    return date >= startDate && date <= endDate
+  })
+
+  if (trimmedData.length < 2) {
+    return {
+      trades: [],
+      equityCurve: [],
+      summary: {
+        totalTrades: 0,
+        winningTrades: 0,
+        losingTrades: 0,
+        winRate: 0,
+        avgTradeReturn: 0,
+        maxTradeReturn: 0,
+        minTradeReturn: 0,
+        strategyReturn: 0,
+        buyHoldReturn: 0,
+        excessReturn: 0,
+      },
+      period: {
+        startDate: "",
+        endDate: "",
+        totalDays: 0,
+      },
+    }
+  }
+
   // --- Simulate ---
   const initialCapital = 10_000_000
   let cash = initialCapital
@@ -275,12 +326,12 @@ export async function runBacktest(etfId: string, period: Period): Promise<Backte
   const trades: BacktestTrade[] = []
   const equityCurve: EquityCurvePoint[] = []
 
-  const firstPrice = dailyData[0].etfClose
+  const firstPrice = trimmedData[0].etfClose
 
-  for (let i = 0; i < dailyData.length; i++) {
-    const day = dailyData[i]
+  for (let i = 0; i < trimmedData.length; i++) {
+    const day = trimmedData[i]
     const signal =
-      day.premium <= -1 ? "BUY" : day.premium >= 1 ? "SELL" : null
+      day.premium <= buyThreshold ? "BUY" : day.premium >= sellThreshold ? "SELL" : null
 
     let signalMark: "BUY" | "SELL" | null = null
 
@@ -323,7 +374,7 @@ export async function runBacktest(etfId: string, period: Period): Promise<Backte
   }
 
   // Mark-to-market any open position
-  const lastDay = dailyData[dailyData.length - 1]
+  const lastDay = trimmedData[trimmedData.length - 1]
   const finalPortfolioValue = cash + shares * lastDay.etfClose
   const strategyReturn = ((finalPortfolioValue - initialCapital) / initialCapital) * 100
   const buyHoldReturn = ((lastDay.etfClose - firstPrice) / firstPrice) * 100
@@ -352,9 +403,9 @@ export async function runBacktest(etfId: string, period: Period): Promise<Backte
       excessReturn: Number((strategyReturn - buyHoldReturn).toFixed(2)),
     },
     period: {
-      startDate: dailyData[0].date,
-      endDate: dailyData[dailyData.length - 1].date,
-      totalDays: dailyData.length,
+      startDate: trimmedData[0].date,
+      endDate: trimmedData[trimmedData.length - 1].date,
+      totalDays: trimmedData.length,
     },
   }
 }

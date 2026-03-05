@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   ReferenceDot,
 } from "recharts"
-import { Play, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, BarChart3, Activity } from "lucide-react"
+import { Play, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, BarChart3, Activity, Info } from "lucide-react"
 import { runBacktest, type BacktestResult, type EquityCurvePoint } from "@/app/backtest-actions"
 import type { Locale } from "@/lib/i18n/config"
 
@@ -21,7 +21,7 @@ const t = {
     sectionDesc: "과거 데이터 기반으로 매매 신호 전략의 성과를 검증합니다",
     period1m: "1개월",
     period3m: "3개월",
-    period6m: "6개월",
+    period6m: "약 6개월",
     runSimulation: "시뮬레이션 실행",
     running: "분석 중...",
     strategyReturn: "전략 수익률",
@@ -45,19 +45,25 @@ const t = {
     sellPrice: "매도가",
     returnPct: "수익률",
     noTrades: "해당 기간에 발생한 거래가 없습니다.",
-    outperformed: "전략이 단순 보유보다",
-    underperformed: "단순 보유가 전략보다",
-    better: "더 높은 수익을 냈습니다",
+    excessReturnTooltip: "초과 수익은 전략 수익률에서 단순 보유 수익률을 뺀 값입니다. 양수면 전략이 더 좋은 성과를, 음수면 단순 보유가 더 좋은 성과를 냈다는 의미입니다.",
     analysisMethod: "추정 공정가치 기반 시뮬레이션",
+    analysisMethodTooltip: "이 시뮬레이션은 과거 지수/환율 데이터를 기반으로 ETF의 이론적 공정가치를 추정하여 프리미엄/디스카운트를 계산합니다. 실제 운용사 공시 NAV와는 차이가 있을 수 있으며, 과거 데이터이므로 미래 수익을 보장하지 않습니다.",
     analysisPeriod: "분석 기간",
     totalDays: "거래일",
+    tradingStrategy: "매매 전략 설정",
+    buyWhen: "매수",
+    sellWhen: "매도",
+    premiumBelow: "프리미엄",
+    premiumAbove: "프리미엄",
+    orLess: "이하",
+    orMore: "이상",
   },
   en: {
     sectionTitle: "Strategy Simulation",
     sectionDesc: "Backtest the signal strategy with historical data",
     period1m: "1M",
     period3m: "3M",
-    period6m: "6M",
+    period6m: "~6M",
     runSimulation: "Run Simulation",
     running: "Analyzing...",
     strategyReturn: "Strategy Return",
@@ -81,12 +87,18 @@ const t = {
     sellPrice: "Sell Price",
     returnPct: "Return",
     noTrades: "No trades occurred in this period.",
-    outperformed: "The strategy outperformed buy & hold by",
-    underperformed: "Buy & hold outperformed the strategy by",
-    better: "",
+    excessReturnTooltip: "Excess return is the strategy return minus buy & hold return. Positive means the strategy performed better, negative means buy & hold performed better.",
     analysisMethod: "Estimated Fair Value Based Simulation",
+    analysisMethodTooltip: "This simulation estimates theoretical fair value based on historical index/FX data to calculate premium/discount. Actual NAV from fund companies may differ, and past results do not guarantee future returns.",
     analysisPeriod: "Analysis Period",
     totalDays: "Trading Days",
+    tradingStrategy: "Trading Strategy",
+    buyWhen: "Buy",
+    sellWhen: "Sell",
+    premiumBelow: "Premium ≤",
+    premiumAbove: "Premium ≥",
+    orLess: "",
+    orMore: "",
   },
 } as const
 
@@ -102,16 +114,19 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
   const labels = t[locale]
   const [period, setPeriod] = useState<Period>("3m")
   const [isLoading, setIsLoading] = useState(false)
-  const [resultsCache, setResultsCache] = useState<Record<Period, BacktestResult | null>>({
-    "1m": null,
-    "3m": null,
-    "6m": null,
-  })
+  const [buyThreshold, setBuyThreshold] = useState(-1)
+  const [sellThreshold, setSellThreshold] = useState(1)
+  const [buyInput, setBuyInput] = useState("-1")
+  const [sellInput, setSellInput] = useState("1")
+  const [resultsCache, setResultsCache] = useState<Record<string, BacktestResult | null>>({})
   const [showTrades, setShowTrades] = useState(false)
   const [autoRun, setAutoRun] = useState(true)
+  const [showTooltip, setShowTooltip] = useState(false)
+  const [showExcessTooltip, setShowExcessTooltip] = useState(false)
   const prevEtfIdRef = useRef<string>(etfId)
 
-  const result = resultsCache[period]
+  const getCacheKey = (p: Period, buy: number, sell: number) => `${p}_${buy}_${sell}`
+  const result = resultsCache[getCacheKey(period, buyThreshold, sellThreshold)]
 
   const periods: { value: Period; label: string }[] = [
     { value: "1m", label: labels.period1m },
@@ -124,36 +139,36 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
     setShowTrades(false)
     setAutoRun(true)
     try {
-      const data = await runBacktest(etfId, period)
+      const data = await runBacktest(etfId, period, buyThreshold, sellThreshold)
+      const cacheKey = getCacheKey(period, buyThreshold, sellThreshold)
       setResultsCache((prev) => ({
         ...prev,
-        [period]: data,
+        [cacheKey]: data,
       }))
     } catch (e) {
       console.error("Backtest failed:", e)
     } finally {
       setIsLoading(false)
     }
-  }, [etfId, period])
+  }, [etfId, period, buyThreshold, sellThreshold])
 
   useEffect(() => {
     if (prevEtfIdRef.current !== etfId) {
       const hadAutoRun = autoRun
-      setResultsCache({
-        "1m": null,
-        "3m": null,
-        "6m": null,
-      })
+      setResultsCache({})
+      setBuyInput(buyThreshold.toString())
+      setSellInput(sellThreshold.toString())
       prevEtfIdRef.current = etfId
       
       if (hadAutoRun) {
         const timer = setTimeout(() => {
           setIsLoading(true)
-          runBacktest(etfId, period)
+          runBacktest(etfId, period, buyThreshold, sellThreshold)
             .then((data) => {
+              const cacheKey = getCacheKey(period, buyThreshold, sellThreshold)
               setResultsCache((prev) => ({
                 ...prev,
-                [period]: data,
+                [cacheKey]: data,
               }))
             })
             .catch((e) => {
@@ -166,10 +181,11 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
         return () => clearTimeout(timer)
       }
     }
-  }, [etfId, period, autoRun])
+  }, [etfId, period, buyThreshold, sellThreshold, autoRun])
 
   useEffect(() => {
-    if (autoRun && !resultsCache[period] && !isLoading) {
+    const cacheKey = getCacheKey(period, buyThreshold, sellThreshold)
+    if (autoRun && !resultsCache[cacheKey] && !isLoading) {
       handleRun()
     }
   }, [period, autoRun, resultsCache, isLoading, handleRun])
@@ -193,9 +209,104 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {labels.sectionDesc}
               </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                {labels.analysisMethod}
-              </p>
+              <div className="flex items-center gap-1.5 mt-1 relative">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {labels.analysisMethod}
+                </p>
+                <button
+                  type="button"
+                  onMouseEnter={() => setShowTooltip(true)}
+                  onMouseLeave={() => setShowTooltip(false)}
+                  onClick={() => setShowTooltip(!showTooltip)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+                {showTooltip && (
+                  <div className="absolute left-0 top-full mt-2 w-72 sm:w-96 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl z-10 border border-gray-700">
+                    <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 dark:bg-gray-800 border-l border-t border-gray-700 transform rotate-45" />
+                    {labels.analysisMethodTooltip}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Trading Strategy Settings - Compact inline */}
+          <div className="flex flex-wrap items-center gap-2.5 text-xs text-gray-500 dark:text-gray-400 -mt-1">
+            <div className="flex items-center gap-1.5">
+              <BarChart3 className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+              <span className="font-medium text-gray-600 dark:text-gray-300">{labels.tradingStrategy}</span>
+            </div>
+            <span className="text-gray-300 dark:text-gray-700">—</span>
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="w-3 h-3 text-green-600 dark:text-green-400" />
+              <span className="text-gray-500 dark:text-gray-400">{labels.buyWhen} ≤</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={buyInput}
+                onChange={(e) => {
+                  let val = e.target.value;
+                  if (buyInput === "0" && val === "0-") {
+                    val = "-";
+                  }
+                  if (val === "" || val === "-" || val === "-." || /^-?\d*\.?\d*$/.test(val)) {
+                    setBuyInput(val);
+                  }
+                }}
+                onBlur={() => {
+                  const num = parseFloat(buyInput);
+                  if (!isNaN(num)) {
+                    setBuyThreshold(num);
+                    setBuyInput(num.toString());
+                  } else {
+                    setBuyInput(buyThreshold.toString());
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.currentTarget.blur();
+                  }
+                }}
+                className="w-11 px-1.5 py-0.5 text-xs text-center font-mono font-semibold border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-green-700 dark:text-green-400 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+              />
+              <span className="text-gray-500 dark:text-gray-400">%</span>
+            </div>
+            <span className="text-gray-300 dark:text-gray-700 hidden sm:inline">|</span>
+            <div className="flex items-center gap-1.5">
+              <TrendingDown className="w-3 h-3 text-red-600 dark:text-red-400" />
+              <span className="text-gray-500 dark:text-gray-400">{labels.sellWhen} ≥</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={sellInput}
+                onChange={(e) => {
+                  let val = e.target.value;
+                  if (sellInput === "0" && val === "0-") {
+                    val = "-";
+                  }
+                  if (val === "" || val === "-" || val === "-." || /^-?\d*\.?\d*$/.test(val)) {
+                    setSellInput(val);
+                  }
+                }}
+                onBlur={() => {
+                  const num = parseFloat(sellInput);
+                  if (!isNaN(num)) {
+                    setSellThreshold(num);
+                    setSellInput(num.toString());
+                  } else {
+                    setSellInput(sellThreshold.toString());
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.currentTarget.blur();
+                  }
+                }}
+                className="w-11 px-1.5 py-0.5 text-xs text-center font-mono font-semibold border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-red-700 dark:text-red-400 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+              />
+              <span className="text-gray-500 dark:text-gray-400">%</span>
             </div>
           </div>
 
@@ -278,7 +389,7 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
       {result && result.equityCurve.length > 0 && !isLoading && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
           {/* Hero Stats - Strategy vs Buy & Hold */}
-          <div className="px-6 pb-4">
+          <div className="px-6 pb-4 pt-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Strategy Return */}
               <div className="rounded-xl p-5 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
@@ -319,19 +430,40 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
               </div>
 
               {/* Excess Return (Alpha) */}
-              <div className={`rounded-xl p-5 border ${
+              <div className={`rounded-xl p-5 border relative ${
                 result.summary.excessReturn >= 0
                   ? "bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800/50"
                   : "bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800/50"
               }`}>
                 <div className="flex items-center justify-between mb-3">
-                  <span className={`text-sm font-medium ${
-                    result.summary.excessReturn >= 0
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-amber-600 dark:text-amber-400"
-                  }`}>
-                    {labels.excessReturn}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-sm font-medium ${
+                      result.summary.excessReturn >= 0
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-amber-600 dark:text-amber-400"
+                    }`}>
+                      {labels.excessReturn}
+                    </span>
+                    <button
+                      type="button"
+                      onMouseEnter={() => setShowExcessTooltip(true)}
+                      onMouseLeave={() => setShowExcessTooltip(false)}
+                      onClick={() => setShowExcessTooltip(!showExcessTooltip)}
+                      className={`${
+                        result.summary.excessReturn >= 0
+                          ? "text-blue-400 hover:text-blue-600 dark:hover:text-blue-300"
+                          : "text-amber-400 hover:text-amber-600 dark:hover:text-amber-300"
+                      } transition-colors`}
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                    </button>
+                    {showExcessTooltip && (
+                      <div className="absolute left-0 top-full mt-2 w-72 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl z-10 border border-gray-700">
+                        <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 dark:bg-gray-800 border-l border-t border-gray-700 transform rotate-45" />
+                        {labels.excessReturnTooltip}
+                      </div>
+                    )}
+                  </div>
                   <div className={`p-1.5 rounded-md ${
                     result.summary.excessReturn >= 0
                       ? "bg-blue-100 dark:bg-blue-900/30"
@@ -352,26 +484,6 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
                   {fmtPct(result.summary.excessReturn)}
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Interpretation Banner */}
-          <div className="px-6 pb-4">
-            <div className={`rounded-lg px-4 py-3 text-sm flex items-start gap-2 ${
-              result.summary.excessReturn >= 0
-                ? "bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200"
-                : "bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200"
-            }`}>
-              {result.summary.excessReturn >= 0 ? (
-                <ArrowUpRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              ) : (
-                <ArrowDownRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              )}
-              <span>
-                {result.summary.excessReturn >= 0
-                  ? `${labels.outperformed} ${fmtPct(Math.abs(result.summary.excessReturn))} ${labels.better}`
-                  : `${labels.underperformed} ${fmtPct(Math.abs(result.summary.excessReturn))} ${labels.better}`}
-              </span>
             </div>
           </div>
 
