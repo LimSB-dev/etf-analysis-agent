@@ -108,7 +108,7 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
     "6m": null,
   })
   const [showTrades, setShowTrades] = useState(false)
-  const [autoRun, setAutoRun] = useState(false)
+  const [autoRun, setAutoRun] = useState(true)
   const prevEtfIdRef = useRef<string>(etfId)
 
   const result = resultsCache[period]

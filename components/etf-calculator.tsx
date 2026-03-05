@@ -65,6 +65,8 @@ export function EtfCalculator() {
   const handleEtfChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const etf = ETF_OPTIONS.find((o) => o.id === e.target.value);
     if (etf) {
+      const savedScrollY = window.scrollY;
+      
       setSelectedEtf(etf);
       setInputs(defaultInputs);
       setResult(null);
@@ -105,6 +107,9 @@ export function EtfCalculator() {
         setInputs(newInputs);
         if (performCalculation(newInputs)) {
           setHasCalculated(true);
+          setTimeout(() => {
+            window.scrollTo({ top: savedScrollY, behavior: "instant" });
+          }, 50);
         }
       } catch (error) {
         console.error("Failed to fetch data", error);
@@ -135,6 +140,7 @@ export function EtfCalculator() {
 
   const handleFetchData = async () => {
     setIsLoading(true);
+    setResult(null);
     try {
       const data = await fetchMarketData(selectedEtf.id);
 
@@ -327,7 +333,7 @@ export function EtfCalculator() {
         </p>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
+      <div className="bg-white dark:bg-gray-900 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800" style={{ scrollSnapAlign: "start" }}>
         {/* Input Section */}
         <div className="p-6 md:p-8 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
           <div className="space-y-6">
@@ -548,6 +554,7 @@ export function EtfCalculator() {
         <div
           ref={resultRef}
           className="p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
+          style={{ scrollMarginTop: "80px", scrollSnapAlign: "start" }}
         >
           {/* Signal Header */}
           <div
@@ -759,22 +766,68 @@ export function EtfCalculator() {
       )}
 
       {/* Premium History Chart - show after calculation */}
-      {hasCalculated && result && (
-        <PremiumHistoryChart
-          etfId={selectedEtf.id}
-          etfName={selectedEtf.name}
-          currentPremium={result.premium}
-          locale={locale}
-        />
+      {hasCalculated && (isLoading || result) && (
+        <div style={{ scrollSnapAlign: "start" }}>
+          {isLoading && !result ? (
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 animate-in fade-in duration-300">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div className="h-64 bg-gray-50 dark:bg-gray-800/50 rounded-lg animate-pulse mb-6" />
+              <div className="space-y-4">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                      <div className="h-3 w-12 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse mx-auto" />
+                      <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : result ? (
+            <PremiumHistoryChart
+              etfId={selectedEtf.id}
+              etfName={selectedEtf.name}
+              currentPremium={result.premium}
+              locale={locale}
+            />
+          ) : null}
+        </div>
       )}
 
       {/* Strategy Simulation - show after calculation */}
-      {hasCalculated && result && (
-        <StrategySimulation
-          etfId={selectedEtf.id}
-          etfName={selectedEtf.name}
-          locale={locale}
-        />
+      {hasCalculated && (isLoading || result) && (
+        <div style={{ scrollSnapAlign: "start" }}>
+          {isLoading && !result ? (
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 animate-in fade-in duration-300">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                <div>
+                  <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
+                  <div className="h-3 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="rounded-xl p-5 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
+                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-3 animate-pulse" />
+                    <div className="h-8 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                  </div>
+                ))}
+              </div>
+              <div className="h-80 bg-gray-50 dark:bg-gray-800/50 rounded-lg animate-pulse" />
+            </div>
+          ) : result ? (
+            <StrategySimulation
+              etfId={selectedEtf.id}
+              etfName={selectedEtf.name}
+              locale={locale}
+            />
+          ) : null}
+        </div>
       )}
     </div>
   );
