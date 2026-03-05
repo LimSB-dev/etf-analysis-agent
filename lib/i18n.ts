@@ -138,7 +138,7 @@ export type TranslationKey = keyof typeof translations.ko;
 export const premiumChartTranslations = {
   ko: {
     title: "프리미엄 추이",
-    last30Days: "최근 약 30거래일",
+    last30Days: "최근 약 6개월",
     loading: "프리미엄 이력을 불러오는 중...",
     loadError: "프리미엄 이력을 불러오지 못했습니다.",
     noData: "프리미엄 이력 데이터가 없습니다.",
@@ -162,7 +162,7 @@ export const premiumChartTranslations = {
   },
   en: {
     title: "Premium History",
-    last30Days: "Last ~30 trading days",
+    last30Days: "Last ~6 months",
     loading: "Loading premium history...",
     loadError: "Failed to load premium history.",
     noData: "No premium history data available.",

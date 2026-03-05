@@ -323,7 +323,7 @@ async function getNaverFxChart(count = 60): Promise<ChartPoint[]> {
 
 export async function fetchPremiumHistory(etfId?: string): Promise<PremiumHistoryResult> {
   const selectedEtf = ETF_OPTIONS.find((e) => e.id === etfId) || ETF_OPTIONS[0]
-  const days = 200 // fetch ~6 months for better context
+  const days = 200 // fetch ~6-8 months of historical data
 
   const [etfChart, indexChart, fxChart] = await Promise.all([
     getNaverDomesticChart(selectedEtf.code, days),

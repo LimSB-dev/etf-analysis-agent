@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import {
   LineChart,
   Line,
@@ -109,6 +109,7 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
   })
   const [showTrades, setShowTrades] = useState(false)
   const [autoRun, setAutoRun] = useState(false)
+  const prevEtfIdRef = useRef<string>(etfId)
 
   const result = resultsCache[period]
 
@@ -136,12 +137,36 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
   }, [etfId, period])
 
   useEffect(() => {
-    setResultsCache({
-      "1m": null,
-      "3m": null,
-      "6m": null,
-    })
-  }, [etfId])
+    if (prevEtfIdRef.current !== etfId) {
+      const hadAutoRun = autoRun
+      setResultsCache({
+        "1m": null,
+        "3m": null,
+        "6m": null,
+      })
+      prevEtfIdRef.current = etfId
+      
+      if (hadAutoRun) {
+        const timer = setTimeout(() => {
+          setIsLoading(true)
+          runBacktest(etfId, period)
+            .then((data) => {
+              setResultsCache((prev) => ({
+                ...prev,
+                [period]: data,
+              }))
+            })
+            .catch((e) => {
+              console.error("Backtest failed:", e)
+            })
+            .finally(() => {
+              setIsLoading(false)
+            })
+        }, 100)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [etfId, period, autoRun])
 
   useEffect(() => {
     if (autoRun && !resultsCache[period] && !isLoading) {

@@ -242,52 +242,68 @@ export function EtfCalculator() {
 
   return (
     <div className="space-y-6">
-      {/* Sticky ETF Selector */}
+      {/* Sticky ETF Selector - Dynamic Island Style with Glassmorphism */}
       <div
-        className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 ease-out ${
+        className={`fixed left-1/2 -translate-x-1/2 z-50 px-5 py-3.5 flex items-center gap-3 min-w-[300px] max-w-[90vw] group ${
           showSticky
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 -translate-y-4 pointer-events-none"
+            ? "opacity-100 scale-100"
+            : "opacity-0 scale-95 pointer-events-none"
         }`}
+        style={{
+          top: showSticky ? "16px" : "-48px",
+          transition: "opacity 0.7s ease-out, transform 0.7s ease-out, top 0.7s ease-out",
+          background: "rgba(255, 255, 255, 0.2)",
+          borderRadius: "100px",
+          boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          border: "1px solid rgba(255, 255, 255, 0.3)",
+        }}
       >
-        <div className="relative bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-full shadow-2xl px-6 py-3 flex items-center gap-3 min-w-[280px] max-w-[90vw] backdrop-blur-lg">
-          <Calculator className="w-4 h-4 flex-shrink-0" />
-          <div className="relative flex-1">
-            <select
-              value={selectedEtf.id}
-              onChange={handleEtfChange}
-              className="w-full appearance-none bg-transparent border-none outline-none text-sm font-medium cursor-pointer pr-6"
-            >
-              <optgroup label={t("nasdaq100Group")}>
-                {ETF_OPTIONS.filter((e) => e.indexSymbol === "QQQ.O").map(
-                  (etf) => (
-                    <option key={etf.id} value={etf.id} className="bg-white text-gray-900">
-                      {etf.name} ({etf.code})
-                    </option>
-                  ),
-                )}
-              </optgroup>
-              <optgroup label={t("sp500Group")}>
-                {ETF_OPTIONS.filter((e) => e.indexSymbol === "SPY").map(
-                  (etf) => (
-                    <option key={etf.id} value={etf.id} className="bg-white text-gray-900">
-                      {etf.name} ({etf.code})
-                    </option>
-                  ),
-                )}
-              </optgroup>
-              <optgroup label={t("semiconductorGroup")}>
-                {ETF_OPTIONS.filter((e) => e.indexSymbol === "SOXX.O").map(
-                  (etf) => (
-                    <option key={etf.id} value={etf.id} className="bg-white text-gray-900">
-                      {etf.name} ({etf.code})
-                    </option>
-                  ),
-                )}
-              </optgroup>
-            </select>
-            <ChevronDown className="w-4 h-4 text-white/70 dark:text-gray-900/70 pointer-events-none absolute right-0 top-1/2 -translate-y-1/2" />
+        {/* Content */}
+        <div className="flex-shrink-0 p-1.5 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-400 dark:to-purple-500">
+          <Calculator className="w-3.5 h-3.5 text-white" />
+        </div>
+        <div className="relative flex-1">
+          <div className="text-sm font-semibold text-gray-900 dark:text-white truncate pr-6" style={{ textShadow: "0 0.5px 1px rgba(255, 255, 255, 0.5)" }}>
+            <span className="hidden sm:inline">{selectedEtf.name} ({selectedEtf.code})</span>
+            <span className="sm:hidden">{selectedEtf.name}</span>
           </div>
+          <select
+            value={selectedEtf.id}
+            onChange={handleEtfChange}
+            disabled={isLoading}
+            className="absolute inset-0 w-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+          >
+            <optgroup label={t("nasdaq100Group")}>
+              {ETF_OPTIONS.filter((e) => e.indexSymbol === "QQQ.O").map(
+                (etf) => (
+                  <option key={`sticky-${etf.id}`} value={etf.id}>
+                    {etf.name} ({etf.code})
+                  </option>
+                ),
+              )}
+            </optgroup>
+            <optgroup label={t("sp500Group")}>
+              {ETF_OPTIONS.filter((e) => e.indexSymbol === "SPY").map(
+                (etf) => (
+                  <option key={`sticky-${etf.id}`} value={etf.id}>
+                    {etf.name} ({etf.code})
+                  </option>
+                ),
+              )}
+            </optgroup>
+            <optgroup label={t("semiconductorGroup")}>
+              {ETF_OPTIONS.filter((e) => e.indexSymbol === "SOXX.O").map(
+                (etf) => (
+                  <option key={`sticky-${etf.id}`} value={etf.id}>
+                    {etf.name} ({etf.code})
+                  </option>
+                ),
+              )}
+            </optgroup>
+          </select>
+          <ChevronDown className={`w-4 h-4 text-gray-700 dark:text-gray-300 pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 ${isLoading ? "animate-pulse" : ""}`} />
         </div>
       </div>
 
@@ -348,7 +364,7 @@ export function EtfCalculator() {
                   <optgroup label={t("nasdaq100Group")}>
                     {ETF_OPTIONS.filter((e) => e.indexSymbol === "QQQ.O").map(
                       (etf) => (
-                        <option key={etf.id} value={etf.id}>
+                        <option key={`main-${etf.id}`} value={etf.id}>
                           {etf.name} ({etf.code})
                         </option>
                       ),
@@ -357,7 +373,7 @@ export function EtfCalculator() {
                   <optgroup label={t("sp500Group")}>
                     {ETF_OPTIONS.filter((e) => e.indexSymbol === "SPY").map(
                       (etf) => (
-                        <option key={etf.id} value={etf.id}>
+                        <option key={`main-${etf.id}`} value={etf.id}>
                           {etf.name} ({etf.code})
                         </option>
                       ),
@@ -366,7 +382,7 @@ export function EtfCalculator() {
                   <optgroup label={t("semiconductorGroup")}>
                     {ETF_OPTIONS.filter((e) => e.indexSymbol === "SOXX.O").map(
                       (etf) => (
-                        <option key={etf.id} value={etf.id}>
+                        <option key={`main-${etf.id}`} value={etf.id}>
                           {etf.name} ({etf.code})
                         </option>
                       ),
@@ -743,17 +759,17 @@ export function EtfCalculator() {
       )}
 
       {/* Premium History Chart - show after calculation */}
-      {hasCalculated && (
+      {hasCalculated && result && (
         <PremiumHistoryChart
           etfId={selectedEtf.id}
           etfName={selectedEtf.name}
-          currentPremium={result?.premium}
+          currentPremium={result.premium}
           locale={locale}
         />
       )}
 
       {/* Strategy Simulation - show after calculation */}
-      {hasCalculated && (
+      {hasCalculated && result && (
         <StrategySimulation
           etfId={selectedEtf.id}
           etfName={selectedEtf.name}

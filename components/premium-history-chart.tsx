@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { BarChart3, TrendingUp, TrendingDown, Minus } from "lucide-react"
 import {
   Area,
@@ -28,6 +28,7 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
   const [data, setData] = useState<PremiumHistoryResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const prevPremiumRef = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     let cancelled = false
@@ -38,17 +39,6 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
       try {
         const result = await fetchPremiumHistory(etfId)
         if (!cancelled) {
-          // If we have a more accurate current premium from the calculator, use it
-          if (currentPremium !== undefined && result.data.length > 0) {
-            result.data[result.data.length - 1].premium = Number(currentPremium.toFixed(2))
-            result.stats.current = Number(currentPremium.toFixed(2))
-            const premiums = result.data.map((p) => p.premium)
-            result.stats.highest = Math.max(...premiums)
-            result.stats.lowest = Math.min(...premiums)
-            result.stats.average = Number((premiums.reduce((a, b) => a + b, 0) / premiums.length).toFixed(2))
-            const range = result.stats.highest - result.stats.lowest
-            result.stats.percentile = range > 0 ? Math.round(((result.stats.current - result.stats.lowest) / range) * 100) : 50
-          }
           setData(result)
         }
       } catch (e) {
@@ -63,7 +53,41 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
 
     load()
     return () => { cancelled = true }
-  }, [etfId, currentPremium, t.loadError])
+  }, [etfId, t.loadError])
+
+  useEffect(() => {
+    if (!data || currentPremium === undefined || data.data.length === 0) {
+      return
+    }
+    
+    if (prevPremiumRef.current === currentPremium) {
+      return
+    }
+    
+    prevPremiumRef.current = currentPremium
+    
+    setData((prevData) => {
+      if (!prevData) {
+        return prevData
+      }
+      
+      const updatedData = { ...prevData }
+      updatedData.data = [...prevData.data]
+      updatedData.data[updatedData.data.length - 1] = {
+        ...updatedData.data[updatedData.data.length - 1],
+        premium: Number(currentPremium.toFixed(2))
+      }
+      updatedData.stats = { ...prevData.stats }
+      updatedData.stats.current = Number(currentPremium.toFixed(2))
+      const premiums = updatedData.data.map((p) => p.premium)
+      updatedData.stats.highest = Math.max(...premiums)
+      updatedData.stats.lowest = Math.min(...premiums)
+      updatedData.stats.average = Number((premiums.reduce((a, b) => a + b, 0) / premiums.length).toFixed(2))
+      const range = updatedData.stats.highest - updatedData.stats.lowest
+      updatedData.stats.percentile = range > 0 ? Math.round(((updatedData.stats.current - updatedData.stats.lowest) / range) * 100) : 50
+      return updatedData
+    })
+  }, [currentPremium])
 
   const fmt = (num: number) => `${num > 0 ? "+" : ""}${num.toFixed(2)}%`
 
