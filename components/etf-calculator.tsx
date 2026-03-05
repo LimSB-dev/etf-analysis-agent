@@ -16,7 +16,8 @@ import {
 import { fetchMarketData } from "@/app/actions";
 import { ETF_OPTIONS, type EtfOption } from "@/lib/etf-options";
 import { useLocaleState } from "@/components/i18n-provider";
-import { PremiumHistoryChart } from "@/components/premium-history-chart";
+import { PremiumHistoryChart } from "@/components/premium-history-chart"
+import { StrategySimulation } from "@/components/strategy-simulation";
 
 type CalculationResult = {
   qqqReturn: number;
@@ -637,6 +638,15 @@ export function EtfCalculator() {
           etfId={selectedEtf.id}
           etfName={selectedEtf.name}
           currentPremium={result.premium}
+          locale={locale}
+        />
+      )}
+
+      {/* Strategy Simulation - show after calculation */}
+      {result && (
+        <StrategySimulation
+          etfId={selectedEtf.id}
+          etfName={selectedEtf.name}
           locale={locale}
         />
       )}
