@@ -141,7 +141,6 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
       "3m": null,
       "6m": null,
     })
-    setAutoRun(false)
   }, [etfId])
 
   useEffect(() => {

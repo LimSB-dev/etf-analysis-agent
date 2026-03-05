@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import {
   Calculator,
@@ -58,13 +58,60 @@ export function EtfCalculator() {
 
   const [result, setResult] = useState<CalculationResult | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const etfSelectorRef = useRef<HTMLDivElement>(null);
+  const [showSticky, setShowSticky] = useState(false);
+  const [hasCalculated, setHasCalculated] = useState(false);
 
-  const handleEtfChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleEtfChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const etf = ETF_OPTIONS.find((o) => o.id === e.target.value);
     if (etf) {
       setSelectedEtf(etf);
       setInputs(defaultInputs);
       setResult(null);
+      
+      setIsLoading(true);
+      try {
+        const data = await fetchMarketData(etf.id);
+
+        if (
+          data.etf.price === 0 ||
+          data.index.price === 0 ||
+          data.fx.price === 0
+        ) {
+          alert(t("someDataMissing"));
+        }
+
+        const newInputs = {
+          ...defaultInputs,
+          etfPrev:
+            data.etf.prevClose > 0
+              ? data.etf.prevClose.toString()
+              : "",
+          etfCurrent:
+            data.etf.price > 0 ? data.etf.price.toString() : "",
+          nav:
+            data.etf.nav > 0 ? data.etf.nav.toString() : "",
+          qqqPrev:
+            data.index.prevClose > 0
+              ? data.index.prevClose.toString()
+              : "",
+          qqqAfter:
+            data.index.price > 0 ? data.index.price.toString() : "",
+          fxPrev:
+            data.fx.prevClose > 0 ? data.fx.prevClose.toString() : "",
+          fxNow: data.fx.price > 0 ? data.fx.price.toString() : "",
+        };
+
+        setInputs(newInputs);
+        if (performCalculation(newInputs)) {
+          setHasCalculated(true);
+        }
+      } catch (error) {
+        console.error("Failed to fetch data", error);
+        alert(t("fetchFailed"));
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -73,6 +120,18 @@ export function EtfCalculator() {
       resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
   };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (etfSelectorRef.current) {
+        const rect = etfSelectorRef.current.getBoundingClientRect();
+        setShowSticky(rect.bottom < 0);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleFetchData = async () => {
     setIsLoading(true);
@@ -112,6 +171,7 @@ export function EtfCalculator() {
 
       // 데이터가 모두 있으면 자동으로 계산 실행 후 스크롤
       if (performCalculation(newInputs)) {
+        setHasCalculated(true);
         scrollToResult();
       }
     } catch (error) {
@@ -182,6 +242,55 @@ export function EtfCalculator() {
 
   return (
     <div className="space-y-6">
+      {/* Sticky ETF Selector */}
+      <div
+        className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 ease-out ${
+          showSticky
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 -translate-y-4 pointer-events-none"
+        }`}
+      >
+        <div className="relative bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-full shadow-2xl px-6 py-3 flex items-center gap-3 min-w-[280px] max-w-[90vw] backdrop-blur-lg">
+          <Calculator className="w-4 h-4 flex-shrink-0" />
+          <div className="relative flex-1">
+            <select
+              value={selectedEtf.id}
+              onChange={handleEtfChange}
+              className="w-full appearance-none bg-transparent border-none outline-none text-sm font-medium cursor-pointer pr-6"
+            >
+              <optgroup label={t("nasdaq100Group")}>
+                {ETF_OPTIONS.filter((e) => e.indexSymbol === "QQQ.O").map(
+                  (etf) => (
+                    <option key={etf.id} value={etf.id} className="bg-white text-gray-900">
+                      {etf.name} ({etf.code})
+                    </option>
+                  ),
+                )}
+              </optgroup>
+              <optgroup label={t("sp500Group")}>
+                {ETF_OPTIONS.filter((e) => e.indexSymbol === "SPY").map(
+                  (etf) => (
+                    <option key={etf.id} value={etf.id} className="bg-white text-gray-900">
+                      {etf.name} ({etf.code})
+                    </option>
+                  ),
+                )}
+              </optgroup>
+              <optgroup label={t("semiconductorGroup")}>
+                {ETF_OPTIONS.filter((e) => e.indexSymbol === "SOXX.O").map(
+                  (etf) => (
+                    <option key={etf.id} value={etf.id} className="bg-white text-gray-900">
+                      {etf.name} ({etf.code})
+                    </option>
+                  ),
+                )}
+              </optgroup>
+            </select>
+            <ChevronDown className="w-4 h-4 text-white/70 dark:text-gray-900/70 pointer-events-none absolute right-0 top-1/2 -translate-y-1/2" />
+          </div>
+        </div>
+      </div>
+
       {/* Page Title */}
       <div className="text-center">
         <div className="flex justify-center items-center gap-3 mb-3">
@@ -226,7 +335,7 @@ export function EtfCalculator() {
             </div>
 
             {/* ETF Selector */}
-            <div className="relative">
+            <div className="relative" ref={etfSelectorRef}>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t("selectEtf")}
               </label>
@@ -274,8 +383,38 @@ export function EtfCalculator() {
               </p>
             </div>
 
+            {/* Fetched Data Display (Read-Only) - Loading Skeleton */}
+            {isLoading && !inputs.etfPrev && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="space-y-3">
+                    <div className="min-h-[44px] flex items-start gap-2">
+                      <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-700 mt-1.5 flex-shrink-0"></span>
+                      <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    </div>
+                    <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+                      <div className="flex justify-between">
+                        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                      </div>
+                      <div className="flex justify-between">
+                        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                      </div>
+                      {i === 1 && (
+                        <div className="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+                          <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                          <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Fetched Data Display (Read-Only) */}
-            {inputs.etfPrev && (
+            {inputs.etfPrev && !isLoading && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
                 {/* Group 1: ETF Data */}
                 <div className="space-y-3">
@@ -340,8 +479,56 @@ export function EtfCalculator() {
         </div>
       </div>
 
+      {/* Results Section - Loading Skeleton */}
+      {isLoading && !result && (
+        <div className="bg-white dark:bg-gray-900 shadow-xl rounded-xl border border-gray-200 dark:border-gray-800 p-6 md:p-8 animate-in fade-in duration-300">
+          {/* Signal Header Skeleton */}
+          <div className="rounded-xl p-6 mb-8 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                <div className="space-y-2">
+                  <div className="h-7 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                  <div className="h-4 w-56 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
+                <div className="h-9 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left Column Skeleton */}
+            <div className="space-y-4">
+              <div className="h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+                  <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
+                  <div className="h-3 w-3/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+
+            {/* Right Column Skeleton */}
+            <div className="space-y-4">
+              <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="p-4 flex justify-between">
+                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Results Section */}
-      {result && (
+      {result && !isLoading && (
         <div
           ref={resultRef}
           className="p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
@@ -556,17 +743,17 @@ export function EtfCalculator() {
       )}
 
       {/* Premium History Chart - show after calculation */}
-      {result && (
+      {hasCalculated && (
         <PremiumHistoryChart
           etfId={selectedEtf.id}
           etfName={selectedEtf.name}
-          currentPremium={result.premium}
+          currentPremium={result?.premium}
           locale={locale}
         />
       )}
 
       {/* Strategy Simulation - show after calculation */}
-      {result && (
+      {hasCalculated && (
         <StrategySimulation
           etfId={selectedEtf.id}
           etfName={selectedEtf.name}
