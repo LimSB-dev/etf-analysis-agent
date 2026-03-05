@@ -5,16 +5,13 @@ import { useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import {
   Calculator,
-  Info,
   TrendingUp,
   TrendingDown,
   Minus,
   RefreshCw,
   ChevronDown,
   Globe,
-  Bell,
-  Github,
-  Mail,
+  Info,
 } from "lucide-react";
 
 type MarketInputs = {
@@ -29,13 +26,12 @@ type MarketInputs = {
 import { fetchMarketData } from "@/app/actions";
 import { ETF_OPTIONS, type EtfOption } from "@/lib/etf-options";
 import { useLocaleState } from "@/components/i18n-provider";
-import { PremiumHistoryChart } from "@/components/premium-history-chart"
-import { StrategySimulation } from "@/components/strategy-simulation";
 
 type CalculationResult = {
   qqqReturn: number;
   fxReturn: number;
   etfFair: number;
+  iNav: number;
   premium: number;
   signal: "BUY" | "SELL" | "HOLD";
 };
@@ -63,7 +59,7 @@ export function EtfCalculator() {
   const resultRef = useRef<HTMLDivElement>(null);
   const etfSelectorRef = useRef<HTMLDivElement>(null);
   const [showSticky, setShowSticky] = useState(false);
-  const [hasCalculated, setHasCalculated] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const handleEtfChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const etf = ETF_OPTIONS.find((o) => o.id === e.target.value);
@@ -108,12 +104,7 @@ export function EtfCalculator() {
         };
 
         setInputs(newInputs);
-        if (performCalculation(newInputs)) {
-          setHasCalculated(true);
-          setTimeout(() => {
-            window.scrollTo({ top: savedScrollY, behavior: "instant" });
-          }, 50);
-        }
+        performCalculation(newInputs);
       } catch (error) {
         console.error("Failed to fetch data", error);
         alert(t("fetchFailed"));
@@ -121,12 +112,6 @@ export function EtfCalculator() {
         setIsLoading(false);
       }
     }
-  };
-
-  const scrollToResult = () => {
-    setTimeout(() => {
-      resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
   };
 
   useEffect(() => {
@@ -177,12 +162,7 @@ export function EtfCalculator() {
       };
 
       setInputs(newInputs);
-
-      // 데이터가 모두 있으면 자동으로 계산 실행 후 스크롤
-      if (performCalculation(newInputs)) {
-        setHasCalculated(true);
-        scrollToResult();
-      }
+      performCalculation(newInputs);
     } catch (error) {
       console.error("Failed to fetch data", error);
       alert(t("fetchFailed"));
@@ -205,20 +185,24 @@ export function EtfCalculator() {
       return false;
     }
 
-    // 1. Index Return (참고용)
+    // 1. Index Return
     const qqqReturn = !isNaN(qqqPrev) && !isNaN(qqqAfter) && qqqPrev > 0 
       ? (qqqAfter - qqqPrev) / qqqPrev 
       : 0;
 
-    // 2. FX Return (참고용)
+    // 2. FX Return
     const fxReturn = !isNaN(fxPrev) && !isNaN(fxNow) && fxPrev > 0 
       ? (fxNow - fxPrev) / fxPrev 
       : 0;
 
-    // 3. Premium/Discount (NAV 기준)
-    const premium = ((etfCurrent - nav) / nav) * 100;
+    // 3. Calculate iNAV (실시간 추정 순자산가치)
+    // iNAV = 전일 NAV × (1 + 지수 수익률) × (1 + 환율 변동률)
+    const iNav = nav * (1 + qqqReturn) * (1 + fxReturn);
 
-    // 4. Signal
+    // 4. Premium/Discount (iNAV 기준)
+    const premium = ((etfCurrent - iNav) / iNav) * 100;
+
+    // 5. Signal
     let signal: "BUY" | "SELL" | "HOLD" = "HOLD";
     if (premium >= 1) {
       signal = "SELL";
@@ -230,6 +214,7 @@ export function EtfCalculator() {
       qqqReturn,
       fxReturn,
       etfFair: nav,
+      iNav,
       premium,
       signal,
     });
@@ -246,6 +231,8 @@ export function EtfCalculator() {
   const fmtPct = (num: number) => `${(num * 100).toFixed(2)}%`;
   const fmtKrw = (num: number) =>
     `₩${num.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  const fmtNum = (num: number) =>
+    num.toLocaleString(undefined, { maximumFractionDigits: 0 });
   const fmtUsd = (num: number) =>
     `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -343,7 +330,7 @@ export function EtfCalculator() {
             <div className="flex flex-col gap-4 mb-4">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                  {t("marketDataInputs")}
+                  {t("premiumAnalysis")}
                 </h2>
                 <button
                   type="button"
@@ -410,28 +397,15 @@ export function EtfCalculator() {
 
             {/* Fetched Data Display (Read-Only) - Loading Skeleton */}
             {isLoading && !inputs.etfPrev && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="space-y-3">
-                    <div className="min-h-[44px] flex items-start gap-2">
-                      <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-700 mt-1.5 flex-shrink-0"></span>
-                      <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-300">
+                {[1, 2].map((i) => (
+                  <div key={i} className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+                    <div className="flex items-center gap-2 mb-3 justify-center">
+                      <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                     </div>
-                    <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
-                      <div className="flex justify-between">
-                        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                      </div>
-                      <div className="flex justify-between">
-                        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                      </div>
-                      {i === 1 && (
-                        <div className="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
-                          <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                          <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                        </div>
-                      )}
+                    <div className="text-center">
+                      <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse mx-auto" />
+                      <div className="h-8 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
                     </div>
                   </div>
                 ))}
@@ -440,433 +414,282 @@ export function EtfCalculator() {
 
             {/* Fetched Data Display (Read-Only) */}
             {inputs.etfPrev && !isLoading && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
-                {/* Group 1: ETF Data */}
-                <div className="space-y-3">
-                  <h3 className="min-h-[44px] font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0"></span>
-                    <span>{selectedEtf.name} ({selectedEtf.code}.KS)</span>
-                  </h3>
-                  <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">{t("prevClose")}</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmtKrw(Number.parseFloat(inputs.etfPrev))}</span>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-300">
+                  {/* Group 1: ETF Current Price */}
+                  <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
+                      <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+                        {selectedEtf.name} ({selectedEtf.code}.KS)
+                      </h3>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">{t("currentPrice")}</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmtKrw(Number.parseFloat(inputs.etfCurrent))}</span>
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        {t("currentPrice")}
+                      </div>
+                      <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                        {fmtKrw(Number.parseFloat(inputs.etfCurrent))}
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
-                      <span className="text-gray-500 dark:text-gray-400 font-semibold">NAV</span>
-                      <span className="font-semibold text-blue-600 dark:text-blue-400">{fmtKrw(Number.parseFloat(inputs.nav))}</span>
+                  </div>
+
+                  {/* Group 2: 실시간 추정 가격 */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-700 rounded-lg p-5">
+                    <div className="mb-3 text-center">
+                      <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+                        {t("realtimeEstimatedFairPrice")}
+                      </h3>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 flex items-center justify-center gap-1.5 group/sub">
+                        <span>iNAV</span>
+                        <div className="relative">
+                          <Info className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 cursor-help" />
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/sub:block w-64 p-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded-lg shadow-lg z-10">
+                            <div className="font-medium mb-1">{t("iNavTooltipTitle")}</div>
+                            <div>{t("iNavTooltipDesc")}</div>
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 dark:border-t-gray-100"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                        {result ? fmtKrw(Math.round(result.iNav)) : fmtKrw(Number.parseFloat(inputs.nav))}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Group 2: Index Data */}
-                <div className="space-y-3">
-                  <h3 className="min-h-[44px] font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
-                    <span className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 flex-shrink-0"></span>
-                    <span>{selectedEtf.indexName} (USD)</span>
-                  </h3>
-                  <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">{t("prevClose")}</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmtUsd(Number.parseFloat(inputs.qqqPrev))}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">{t("currentPrice")}</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmtUsd(Number.parseFloat(inputs.qqqAfter))}</span>
+                {/* Signal Card - 매수/매도/보유 (Loading) */}
+                {isLoading && (
+                  <div className="rounded-xl p-6 border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 animate-pulse">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700" />
+                        <div className="space-y-2">
+                          <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+                          <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
+                        </div>
+                      </div>
+                      <div className="bg-white dark:bg-gray-900 rounded-xl px-8 py-5 border border-gray-200 dark:border-gray-700">
+                        <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-2 mx-auto" />
+                        <div className="h-12 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* Group 3: FX Data */}
-                <div className="space-y-3">
-                  <h3 className="min-h-[44px] font-semibold text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-start gap-2">
-                    <span className="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0"></span>
-                    <span>{t("exchangeRate")} (KRW/USD)</span>
-                  </h3>
-                  <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">{t("prevClose")}</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmt(Number.parseFloat(inputs.fxPrev))}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">{t("currentPrice")}</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{fmt(Number.parseFloat(inputs.fxNow))}</span>
+                {/* Signal Card - 매수/매도/보유 */}
+                {result && !isLoading && (
+                  <div
+                    ref={resultRef}
+                    className={`rounded-xl p-6 animate-in fade-in duration-500 border-2 ${
+                      result.signal === "BUY"
+                        ? "bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 dark:from-green-950/40 dark:to-emerald-950/40 dark:border-green-700"
+                        : result.signal === "SELL"
+                          ? "bg-gradient-to-br from-red-50 to-rose-50 border-red-300 dark:from-red-950/40 dark:to-rose-950/40 dark:border-red-700"
+                          : "bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300 dark:from-yellow-950/40 dark:to-orange-950/40 dark:border-yellow-700"
+                    }`}
+                    style={{ scrollMarginTop: "80px" }}
+                  >
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                      {/* Signal Icon + Text */}
+                      <div className="flex items-center gap-4">
+                        <div
+                          className={`p-4 rounded-full ${
+                            result.signal === "BUY"
+                              ? "bg-green-500 text-white dark:bg-green-600"
+                              : result.signal === "SELL"
+                                ? "bg-red-500 text-white dark:bg-red-600"
+                                : "bg-yellow-500 text-white dark:bg-yellow-600"
+                          }`}
+                        >
+                          {result.signal === "BUY" && <TrendingUp className="w-8 h-8" />}
+                          {result.signal === "SELL" && <TrendingDown className="w-8 h-8" />}
+                          {result.signal === "HOLD" && <Minus className="w-8 h-8" />}
+                        </div>
+                        <div>
+                          <div className="text-3xl md:text-4xl font-black mb-1">
+                            {result.signal === "BUY" && (
+                              <span className="text-green-600 dark:text-green-400">
+                                {t("buyAction")}
+                              </span>
+                            )}
+                            {result.signal === "SELL" && (
+                              <span className="text-red-600 dark:text-red-400">
+                                {t("sellAction")}
+                              </span>
+                            )}
+                            {result.signal === "HOLD" && (
+                              <span className="text-yellow-600 dark:text-yellow-400">
+                                {t("holdAction")}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line mb-3">
+                            {result.signal === "BUY" && t("buySignalDesc")}
+                            {result.signal === "SELL" && t("sellSignalDesc")}
+                            {result.signal === "HOLD" && t("holdSignalDesc")}
+                          </p>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-white dark:bg-gray-900 px-3 py-2 rounded border border-gray-200 dark:border-gray-700">
+                            {t("premiumFormulaText")}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Premium Badge */}
+                      <div className="text-center bg-white dark:bg-gray-900 rounded-xl px-8 py-5 shadow-lg border border-gray-200 dark:border-gray-700">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                          {t("currentPremium")}
+                        </div>
+                        <div
+                          className={`text-4xl md:text-5xl font-bold ${
+                            result.premium > 0
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-green-600 dark:text-green-400"
+                          }`}
+                        >
+                          {result.premium > 0 ? "+" : ""}
+                          {fmt(result.premium)}%
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
+
+                {/* Collapsible Details Section */}
+                {result && (
+                  <div className="mt-4 bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setShowDetails(!showDetails)}
+                      className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Info className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">
+                          {t("detailedAnalysis")}
+                        </span>
+                      </div>
+                      <ChevronDown
+                        className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${
+                          showDetails ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {showDetails && (
+                      <div className="p-6 pt-0 border-t border-gray-200 dark:border-gray-800 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 items-stretch">
+                          {/* Left: iNAV Calculation */}
+                          <div className="flex flex-col space-y-4">
+                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                              <Calculator className="w-4 h-4 text-gray-500" />
+                              {t("iNavCalculation")}
+                            </h3>
+                            <div className="grid grid-cols-1 gap-3 text-sm flex-1 auto-rows-fr">
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg flex justify-between items-center min-h-[52px]">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  ① {t("officialNav")} {t("prevDay")}
+                                </span>
+                                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                  {fmtKrw(Math.round(result.etfFair))}
+                                </span>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg flex justify-between items-center min-h-[52px]">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  ② {selectedEtf.indexName.split(" ")[0]} {t("indexReturn")} ({t("indexReturnDesc")})
+                                </span>
+                                <span className={`font-semibold shrink-0 ${result.qqqReturn >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                                  {result.qqqReturn >= 0 ? "+" : ""}{fmtPct(result.qqqReturn)}
+                                </span>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg flex justify-between items-center min-h-[52px]">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  ③ {t("fxReturn")} ({t("fxReturnDesc")})
+                                </span>
+                                <span className={`font-semibold shrink-0 ${result.fxReturn >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                                  {result.fxReturn >= 0 ? "+" : ""}{fmtPct(result.fxReturn)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Premium Breakdown */}
+                          <div className="flex flex-col space-y-4">
+                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                              <Info className="w-4 h-4 text-gray-500" />
+                              {t("analysisSummary")}
+                            </h3>
+                            <div className="grid grid-cols-1 gap-3 text-sm flex-1 auto-rows-fr">
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg flex justify-between items-center min-h-[52px]">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  {t("realtimeEstimatedPrice")}
+                                </span>
+                                <span className="font-semibold text-blue-700 dark:text-blue-300">
+                                  {fmtKrw(Math.round(result.iNav))}
+                                </span>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg flex justify-between items-center min-h-[52px]">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  {t("currentMarketPrice")}
+                                </span>
+                                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                  {fmtKrw(Number.parseFloat(inputs.etfCurrent))}
+                                </span>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg flex justify-between items-center min-h-[52px]">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  {t("gap")}
+                                </span>
+                                <span
+                                  className={`font-semibold shrink-0 ${
+                                    Number.parseFloat(inputs.etfCurrent) > result.iNav
+                                      ? "text-red-600 dark:text-red-400"
+                                      : "text-green-600 dark:text-green-400"
+                                  }`}
+                                >
+                                  {fmtKrw(
+                                    Number.parseFloat(inputs.etfCurrent) - Math.round(result.iNav)
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 합친 파란 영역: 결론 + 추정 가격 계산식 (전체 가로) */}
+                        <div className="mt-6 w-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg p-5 border-2 border-blue-200 dark:border-blue-800">
+                          <div className="flex flex-col gap-4">
+                            <div className="text-base text-gray-900 dark:text-gray-100">
+                              <span className="font-medium">{selectedEtf.name}</span>
+                              {t("fairPriceIs")}{" "}
+                              <span className="font-bold text-xl text-blue-600 dark:text-blue-400">
+                                {fmtKrw(Math.round(result.iNav))}
+                              </span>
+                              {t("fairPriceEnd")}
+                            </div>
+                            <div className="space-y-1.5">
+                              <div className="text-xs text-blue-800/90 dark:text-blue-200/90 font-medium">
+                                {t("iNavFormulaDesc")}
+                              </div>
+                              <div className="text-xs text-blue-800/80 dark:text-blue-200/80 font-mono">
+                                {fmtNum(Math.round(result.etfFair))} × (1 + {result.qqqReturn >= 0 ? "+" : ""}{fmtPct(result.qqqReturn)}) × (1 + {result.fxReturn >= 0 ? "+" : ""}{fmtPct(result.fxReturn)}) = {fmtNum(Math.round(result.iNav))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Results Section - Loading Skeleton */}
-      {isLoading && !result && (
-        <div className="bg-white dark:bg-gray-900 shadow-xl rounded-xl border border-gray-200 dark:border-gray-800 p-6 md:p-8 animate-in fade-in duration-300">
-          {/* Signal Header Skeleton */}
-          <div className="rounded-xl p-6 mb-8 bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
-                <div className="space-y-2">
-                  <div className="h-7 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                  <div className="h-4 w-56 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
-                <div className="h-9 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              </div>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Left Column Skeleton */}
-            <div className="space-y-4">
-              <div className="h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                  <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
-                  <div className="h-3 w-3/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                </div>
-              ))}
-            </div>
-
-            {/* Right Column Skeleton */}
-            <div className="space-y-4">
-              <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="p-4 flex justify-between">
-                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Results Section */}
-      {result && !isLoading && (
-        <div
-          ref={resultRef}
-          className="p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
-          style={{ scrollMarginTop: "80px", scrollSnapAlign: "start" }}
-        >
-          {/* Signal Header */}
-          <div
-            className={`rounded-xl p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 border-2 ${
-              result.signal === "BUY"
-                ? "bg-green-50 border-green-100 dark:bg-green-900/20 dark:border-green-900/50"
-                : result.signal === "SELL"
-                  ? "bg-red-50 border-red-100 dark:bg-red-900/20 dark:border-red-900/50"
-                  : "bg-yellow-50 border-yellow-100 dark:bg-yellow-900/20 dark:border-yellow-900/50"
-            }`}
-          >
-            <div className="flex items-center gap-4">
-              <div
-                className={`p-3 rounded-full ${
-                  result.signal === "BUY"
-                    ? "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400"
-                    : result.signal === "SELL"
-                      ? "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400"
-                      : "bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-400"
-                }`}
-              >
-                {result.signal === "BUY" && <TrendingUp className="w-8 h-8" />}
-                {result.signal === "SELL" && (
-                  <TrendingDown className="w-8 h-8" />
-                )}
-                {result.signal === "HOLD" && <Minus className="w-8 h-8" />}
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {t("signal")}: {result.signal}
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400">
-                  {result.signal === "BUY" && t("buySignalDesc")}
-                  {result.signal === "SELL" && t("sellSignalDesc")}
-                  {result.signal === "HOLD" && t("holdSignalDesc")}
-                </p>
-              </div>
-            </div>
-            <div className="text-center md:text-right">
-              <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                {t("currentPremium")}
-              </div>
-              <div
-                className={`text-3xl font-bold ${
-                  result.premium > 0
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-green-600 dark:text-green-400"
-                }`}
-              >
-                {result.premium > 0 ? "+" : ""}
-                {fmt(result.premium)}%
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* NAV-Based Calculation */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-gray-500" />
-                {t("navBasedCalculation")}
-              </h3>
-
-              <div className="space-y-4 text-sm">
-                {/* NAV (Official) */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-900/50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold text-blue-900 dark:text-blue-100">
-                      {t("officialNav")}
-                    </span>
-                    <span className="font-bold text-lg text-blue-700 dark:text-blue-300">
-                      {fmtKrw(Math.round(result.etfFair))}
-                    </span>
-                  </div>
-                  <div className="text-xs text-blue-800/70 dark:text-blue-200/70">
-                    {t("navDescription")}
-                  </div>
-                </div>
-
-                {/* Market Factors (Reference) */}
-                {result.qqqReturn !== 0 && result.fxReturn !== 0 && (
-                  <>
-                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                      <div className="flex justify-between text-gray-500 dark:text-gray-400 mb-2">
-                        <span>
-                          {selectedEtf.indexName.split(" ")[0]}{" "}
-                          {t("indexReturn")}
-                        </span>
-                        <span>{fmtPct(result.qqqReturn)}</span>
-                      </div>
-                      <div className="font-mono text-xs text-gray-600 dark:text-gray-300">
-                        ({fmtUsd(Number.parseFloat(inputs.qqqAfter))} -{" "}
-                        {fmtUsd(Number.parseFloat(inputs.qqqPrev))}) /{" "}
-                        {fmtUsd(Number.parseFloat(inputs.qqqPrev))}
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                      <div className="flex justify-between text-gray-500 dark:text-gray-400 mb-2">
-                        <span>{t("fxReturn")}</span>
-                        <span>{fmtPct(result.fxReturn)}</span>
-                      </div>
-                      <div className="font-mono text-xs text-gray-600 dark:text-gray-300">
-                        ({fmt(Number.parseFloat(inputs.fxNow))} -{" "}
-                        {fmt(Number.parseFloat(inputs.fxPrev))}) /{" "}
-                        {fmt(Number.parseFloat(inputs.fxPrev))}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Analysis Summary */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                <Info className="w-5 h-5 text-gray-500" />
-                {t("analysisSummary")}
-              </h3>
-
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-                <div className="p-4 flex justify-between items-center bg-blue-50/50 dark:bg-blue-900/10">
-                  <span className="text-gray-600 dark:text-gray-400 font-semibold">
-                    NAV {t("netAssetValue")}
-                  </span>
-                  <span className="font-semibold text-blue-700 dark:text-blue-300">
-                    {fmtKrw(Math.round(result.etfFair))}
-                  </span>
-                </div>
-                <div className="p-4 flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {t("currentMarketPrice")}
-                  </span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {fmtKrw(Number.parseFloat(inputs.etfCurrent))}
-                  </span>
-                </div>
-                <div className="p-4 flex justify-between items-center bg-gray-50 dark:bg-gray-800/30">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {t("gap")}
-                  </span>
-                  <span
-                    className={`font-semibold ${
-                      Number.parseFloat(inputs.etfCurrent) > result.etfFair
-                        ? "text-red-600"
-                        : "text-green-600"
-                    }`}
-                  >
-                    {fmtKrw(
-                      Number.parseFloat(inputs.etfCurrent) -
-                        Math.round(result.etfFair),
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-sm text-gray-600 dark:text-gray-300">
-                <h4 className="font-semibold mb-2 text-gray-900 dark:text-gray-100">
-                  {t("marketInsight")}
-                </h4>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>
-                    {t("officialNav")}: {fmtKrw(Math.round(result.etfFair))}
-                  </li>
-                  <li>
-                    {t("currentMarketPrice")}: {fmtKrw(Number.parseFloat(inputs.etfCurrent))}
-                  </li>
-                  <li>
-                    {result.premium > 0 ? t("tradingAtPremium") : t("tradingAtDiscount")}{" "}
-                    <span
-                      className={
-                        result.premium > 0 ? "text-red-600" : "text-green-600"
-                      }
-                    >
-                      {Math.abs(result.premium).toFixed(2)}%
-                    </span>
-                  </li>
-                  {result.qqqReturn !== 0 && result.fxReturn !== 0 && (
-                    <>
-                      <li className="text-gray-500 dark:text-gray-400 text-xs mt-2">
-                        {t("reference")}: {selectedEtf.indexName.split(" ")[0]}{" "}
-                        <span
-                          className={
-                            result.qqqReturn >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }
-                        >
-                          {result.qqqReturn >= 0 ? t("up") : t("down")}{" "}
-                          {fmtPct(Math.abs(result.qqqReturn))}
-                        </span>
-                        , USD/KRW{" "}
-                        <span
-                          className={
-                            result.fxReturn >= 0 ? "text-green-600" : "text-red-600"
-                          }
-                        >
-                          {result.fxReturn >= 0 ? t("up") : t("down")}{" "}
-                          {fmtPct(Math.abs(result.fxReturn))}
-                        </span>
-                      </li>
-                    </>
-                  )}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Premium History Chart - show after calculation */}
-      {hasCalculated && (isLoading || result) && (
-        <div style={{ scrollSnapAlign: "start" }}>
-          {isLoading && !result ? (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 animate-in fade-in duration-300">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              </div>
-              <div className="h-64 bg-gray-50 dark:bg-gray-800/50 rounded-lg animate-pulse mb-6" />
-              <div className="space-y-4">
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                      <div className="h-3 w-12 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse mx-auto" />
-                      <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mx-auto" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : result ? (
-            <PremiumHistoryChart
-              etfId={selectedEtf.id}
-              etfName={selectedEtf.name}
-              currentPremium={result.premium}
-              locale={locale}
-            />
-          ) : null}
-        </div>
-      )}
-
-      {/* Strategy Simulation - show after calculation */}
-      {hasCalculated && (isLoading || result) && (
-        <div style={{ scrollSnapAlign: "start" }}>
-          {isLoading && !result ? (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 animate-in fade-in duration-300">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
-                <div>
-                  <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
-                  <div className="h-3 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="rounded-xl p-5 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
-                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-3 animate-pulse" />
-                    <div className="h-8 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                  </div>
-                ))}
-              </div>
-              <div className="h-80 bg-gray-50 dark:bg-gray-800/50 rounded-lg animate-pulse" />
-            </div>
-          ) : result ? (
-            <StrategySimulation
-              etfId={selectedEtf.id}
-              etfName={selectedEtf.name}
-              locale={locale}
-            />
-          ) : null}
-        </div>
-      )}
-
-      {/* Real-time Alert CTA */}
-      {hasCalculated && result && (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl border-2 border-blue-200 dark:border-blue-800 p-8 text-center animate-in fade-in duration-500">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/40">
-              <Bell className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            {t("realtimeAlertTitle")}
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 max-w-2xl mx-auto">
-            {t("realtimeAlertDesc")}
-          </p>
-          <div className="flex gap-4 justify-center items-center">
-            <a
-              href="https://github.com/LimSB-dev/v0-etf-analysis-agent/issues/new?title=%EC%8B%A4%EC%8B%9C%EA%B0%84+%EC%95%8C%EB%9E%8C+%EA%B8%B0%EB%8A%A5+%EC%9A%94%EC%B2%AD&body=%EC%8B%A4%EC%8B%9C%EA%B0%84+%EB%A7%A4%EC%88%98%2F%EB%A7%A4%EB%8F%84+%EC%95%8C%EB%9E%8C+%EA%B8%B0%EB%8A%A5%EC%9D%84+%EC%9B%90%ED%95%A9%EB%8B%88%EB%8B%A4."
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900 text-sm font-medium transition-colors"
-            >
-              <Github className="w-4 h-4" />
-              <span>GitHub</span>
-            </a>
-            <a
-              href="mailto:mae03087@naver.com?subject=%EC%8B%A4%EC%8B%9C%EA%B0%84%20ETF%20%EC%95%8C%EB%9E%8C%20%EA%B8%B0%EB%8A%A5%20%EC%9A%94%EC%B2%AD&body=%EC%8B%A4%EC%8B%9C%EA%B0%84%20%EB%A7%A4%EC%88%98/%EB%A7%A4%EB%8F%84%20%EC%95%8C%EB%9E%8C%20%EA%B8%B0%EB%8A%A5%EC%9D%84%20%EC%9B%90%ED%95%A9%EB%8B%88%EB%8B%A4."
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm font-medium transition-colors border border-gray-300 dark:border-gray-700"
-            >
-              <Mail className="w-4 h-4" />
-              <span>{locale === "ko" ? "이메일" : "Email"}</span>
-            </a>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

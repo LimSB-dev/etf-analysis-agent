@@ -10,6 +10,7 @@ export const translations = {
     realtimeAlertDesc: "프리미엄 기준 도달 시 알람을 받고 싶다면 아래 버튼을 클릭해주세요. 수요가 충분하면 기능을 추가하겠습니다.",
 
     // Header
+    premiumAnalysis: "프리미엄 분석",
     marketDataInputs: "시장 데이터 입력",
     fetchingData: "시세 조회 중...",
     autoFetchPrices: "실시간 시세 조회",
@@ -34,24 +35,49 @@ export const translations = {
 
     // Signal
     signal: "신호",
+    buyAction: "매수 신호",
+    sellAction: "매도 신호",
+    holdAction: "관망 신호",
     buySignalDesc:
-      "ETF가 저평가 상태입니다 (프리미엄 ≤ -1%). 좋은 매수 시점입니다.",
+      "ETF가 추정 가격 대비 저평가 상태입니다.\n프리미엄 ≤ -1% 구간입니다.",
     sellSignalDesc:
-      "ETF가 고평가 상태입니다 (프리미엄 ≥ +1%). 차익 실현을 고려하세요.",
+      "ETF가 추정 가격 대비 고평가 상태입니다.\n프리미엄 ≥ +1% 구간입니다.",
     holdSignalDesc:
-      "ETF가 적정가 수준입니다 (-1% < 프리미엄 < +1%). 현재 포지션을 유지하세요.",
+      "ETF가 추정 가격 대비 적정 수준입니다.\n-1% < 프리미엄 < +1% 구간입니다.",
     currentPremium: "현재 프리미엄",
 
     // Calculation
     fairValueCalculation: "적정가 계산",
     fairValue: "적정가",
     indexReturn: "수익률",
+    indexReturnDesc: "당일 지수 수익률",
     fxReturn: "환율 변동률",
+    fxReturnDesc: "당일 환율 변동률",
+    iNavCalculation: "iNAV 계산 과정",
+    prevDay: "(전일)",
+    iNavLabel: "(실시간 추정)",
+    iNavTooltipTitle: "iNAV란?",
+    iNavTooltipDesc: "실시간 추정 순자산가치로, 전일 NAV에 지수 변동률과 환율 변동률을 반영하여 실시간으로 계산됩니다.",
+    realtimeEstimate: "실시간 추정",
+    realtimeEstimatedPrice: "실시간 추정 가격",
+    realtimeEstimatedFairPrice: "실시간 추정 가격",
+    navBasedCalculation: "NAV 기준 계산",
+    premiumFormula: "프리미엄 계산 공식",
+    premiumFormulaText: "(ETF 현재가 - iNAV) / iNAV × 100",
+    iNavFormulaDesc: "NAV × (1 + 지수 수익률) × (1 + 환율 변동률) = iNAV",
+    officialNav: "공식 NAV",
+    navDescription: "운용사가 공시한 순자산가치",
 
     // Summary
     analysisSummary: "분석 요약",
     currentMarketPrice: "현재 시장가",
     gap: "괴리",
+    netAssetValue: "(순자산가치)",
+    detailedAnalysis: "상세 분석 보기",
+    fairPriceSummary: "추정 iNAV",
+    fairPriceIs: "의 실시간 추정 가격은",
+    fairPriceEnd: "입니다",
+    iNavDisclaimer: "이 값은 전일 NAV, 기초 ETF 수익률, 환율 변동을 기반으로 계산된 실시간 추정 가격입니다.",
 
     // Market Insight
     marketInsight: "시장 인사이트",
@@ -60,6 +86,9 @@ export const translations = {
     down: "하락",
     shouldTradeAt: "에 거래되어야 합니다.",
     etfShouldTrade: "ETF는",
+    tradingAtPremium: "NAV 대비 프리미엄",
+    tradingAtDiscount: "NAV 대비 할인",
+    reference: "참고",
 
     // Alerts
     someDataMissing:
@@ -77,6 +106,7 @@ export const translations = {
     realtimeAlertDesc: "Click below if you'd like to receive alerts when premium thresholds are met. We'll add this feature if there's enough demand.",
 
     // Header
+    premiumAnalysis: "Real-Time Analysis",
     marketDataInputs: "Market Data Inputs",
     fetchingData: "Fetching Prices...",
     autoFetchPrices: "Fetch Latest Prices",
@@ -101,23 +131,48 @@ export const translations = {
 
     // Signal
     signal: "Signal",
-    buySignalDesc: "ETF is undervalued (Premium ≤ -1%). Good entry point.",
+    buyAction: "Buy Signal",
+    sellAction: "Sell Signal",
+    holdAction: "Neutral Signal",
+    buySignalDesc: "ETF is undervalued vs estimated price.\nPremium ≤ -1% zone.",
     sellSignalDesc:
-      "ETF is overvalued (Premium ≥ +1%). Consider taking profits.",
+      "ETF is overvalued vs estimated price.\nPremium ≥ +1% zone.",
     holdSignalDesc:
-      "ETF is fairly valued (-1% < Premium < +1%). Hold current position.",
+      "ETF is fairly valued vs estimated price.\n-1% < Premium < +1% zone.",
     currentPremium: "Current Premium",
 
     // Calculation
     fairValueCalculation: "Fair Value Calculation",
     fairValue: "Fair Value",
     indexReturn: "Return",
+    indexReturnDesc: "Daily index return",
     fxReturn: "FX Return",
+    fxReturnDesc: "Daily FX change",
+    iNavCalculation: "iNAV Calculation Process",
+    prevDay: "(Prev Day)",
+    iNavLabel: "(Real-time Est.)",
+    iNavTooltipTitle: "What is iNAV?",
+    iNavTooltipDesc: "Indicative NAV is the real-time estimated net asset value, calculated by applying index and FX changes to the previous day's NAV.",
+    realtimeEstimate: "Real-time Estimate",
+    realtimeEstimatedPrice: "Real-time Estimated Price",
+    realtimeEstimatedFairPrice: "Real-time Estimated Price",
+    navBasedCalculation: "NAV-Based Calculation",
+    premiumFormula: "Premium Calculation Formula",
+    premiumFormulaText: "(ETF Price - iNAV) / iNAV × 100",
+    iNavFormulaDesc: "NAV × (1 + index return) × (1 + FX change) = iNAV",
+    officialNav: "Official NAV",
+    navDescription: "Net Asset Value published by fund manager",
 
     // Summary
     analysisSummary: "Analysis Summary",
     currentMarketPrice: "Current Market Price",
     gap: "Gap",
+    netAssetValue: "(Net Asset Value)",
+    detailedAnalysis: "Detailed Analysis",
+    fairPriceSummary: "Estimated iNAV",
+    fairPriceIs: "'s real-time estimated price is",
+    fairPriceEnd: "",
+    iNavDisclaimer: "This value is a real-time estimated price calculated based on previous day's NAV, underlying ETF returns, and FX changes.",
 
     // Market Insight
     marketInsight: "Market Insight",
@@ -126,6 +181,9 @@ export const translations = {
     down: "down",
     shouldTradeAt: "",
     etfShouldTrade: "ETF should trade at",
+    tradingAtPremium: "Trading at Premium vs NAV",
+    tradingAtDiscount: "Trading at Discount vs NAV",
+    reference: "Reference",
 
     // Alerts
     someDataMissing:
