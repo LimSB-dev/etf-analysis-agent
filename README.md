@@ -5,8 +5,9 @@
 ## 주요 기능
 
 ### 프리미엄 분석
-- **다양한 ETF 지원**: Nasdaq 100(QQQ), S&P 500(SPY), 필라델피아 반도체(SOXX) 추종 국내 상장 ETF 분석
-- **실시간 데이터 조회**: 네이버 금융 API를 통한 ETF 현재가·전일종가·NAV, 기초지수(QQQ, SPY, SOXX), 환율 자동 조회
+- **다양한 ETF 지원**: Nasdaq 100(NDX), S&P 500(SPX), 필라델피아 반도체(SOX) 추종 국내 상장 ETF 분석
+- **기초지수**: ETF가 아닌 **실제 지수**(NDX, SPX, SOX) 기준으로 조회해 더 정확한 계산
+- **실시간 데이터 조회**: 네이버 금융 API를 통한 ETF 현재가·NAV, 기초지수(NDX, SPX, SOX), 환율 자동 조회
 - **iNAV·적정가 계산**: 전일 NAV와 기초지수 수익률·환율 변동을 반영한 실시간 추정 가격(iNAV) 산출
 - **매매 신호**: 프리미엄 기준 BUY(≤ -1%) / SELL(≥ +1%) / HOLD(-1% ~ +1%) 신호 및 설명
 - **상세 분석 접기/펼치기**: iNAV 계산 과정, 분석 요약, 공식 정리 블록
@@ -32,9 +33,9 @@
 
 | 기초지수 | ETF |
 |---------|-----|
-| Nasdaq 100 (QQQ) | TIGER 미국나스닥100, KODEX 미국나스닥100TR, ACE 미국나스닥100 |
-| S&P 500 (SPY) | TIGER 미국S&P500, KODEX 미국S&P500TR, ACE 미국S&P500 |
-| Philadelphia Semiconductor (SOXX) | TIGER 미국필라델피아반도체나스닥, KODEX 미국반도체MV |
+| Nasdaq 100 (NDX) | TIGER 미국나스닥100, KODEX 미국나스닥100TR, ACE 미국나스닥100 |
+| S&P 500 (SPX) | TIGER 미국S&P500, KODEX 미국S&P500TR, ACE 미국S&P500 |
+| Philadelphia Semiconductor (SOX) | TIGER 미국필라델피아반도체나스닥, KODEX 미국반도체MV, ACE 미국반도체커버드콜(합성) |
 
 ## 계산 공식
 
