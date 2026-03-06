@@ -65,6 +65,7 @@ export function EtfCalculator() {
 
   const [result, setResult] = useState<CalculationResult | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const etfSelectorRef = useRef<HTMLDivElement>(null);
   const [showSticky, setShowSticky] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isKoreanMarketOpen, setIsKoreanMarketOpen] = useState(true);
@@ -263,6 +264,18 @@ export function EtfCalculator() {
   const fmtUsd = (num: number) =>
     `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (etfSelectorRef.current) {
+        const rect = etfSelectorRef.current.getBoundingClientRect();
+        setShowSticky(rect.bottom < 0);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Sticky ETF Selector - Dynamic Island Style with Glassmorphism */}
@@ -383,7 +396,7 @@ export function EtfCalculator() {
             </div>
 
             {/* ETF Selector */}
-            <div className="relative">
+            <div className="relative" ref={etfSelectorRef}>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t("selectEtf")}
               </label>
