@@ -93,5 +93,23 @@
   "themeDark": "Dark",
   "themeSystem": "System",
   "themeToggleLabel": "Change theme",
-  "themeToggleClickHint": "Click to cycle theme"
+  "themeToggleClickHint": "Click to cycle theme",
+  "headerServiceDescription": "About this service",
+  "about": {
+    "title": "About this service",
+    "description": "A free analysis tool for Korea-listed US ETFs: premium/NAV analysis, buy/sell signals, premium trend charts, and strategy simulation.",
+    "backToHome": "Back to home",
+    "sectionWhatTitle": "What is this service?",
+    "sectionWhatContent": "This platform analyzes real-time premium (discount/premium to NAV) for US index-tracking ETFs listed on the Korean exchange (e.g. TIGER US Nasdaq 100, KODEX US S&P 500, ACE US Semiconductor). It provides buy/sell/neutral signals based on iNAV (indicative NAV) and uses market data from NAVER Finance. You can also view premium history charts, run strategy simulations, and compare ETFs that track the same index.",
+    "sectionFeaturesTitle": "Features",
+    "featurePremium": "Real-time premium analysis and iNAV-based fair value estimate",
+    "featureSignal": "Buy/sell/neutral signals by premium band",
+    "featureTrend": "Premium history chart with cheap/expensive zone interpretation",
+    "featureStrategy": "DCA and lump-sum strategy simulation",
+    "featureCompare": "Compare NAV, iNAV, and premium across same-index ETFs",
+    "sectionTargetTitle": "Who is it for?",
+    "sectionTargetContent": "Useful for investors trading US index ETFs, or anyone looking to time entries by premium level or compare same-index ETFs. Information is for reference only; investment decisions are your own responsibility.",
+    "sectionDisclaimerTitle": "Disclaimer",
+    "sectionDisclaimerContent": "Figures and signals on this service are for reference only and do not constitute investment advice or predictions. iNAV and premium are estimates based on prior NAV, index, and FX data and may differ from official NAV and market conditions. All investment decisions are your own responsibility."
+  }
 }

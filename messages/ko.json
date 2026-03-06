@@ -93,5 +93,23 @@
   "themeDark": "다크",
   "themeSystem": "시스템",
   "themeToggleLabel": "테마 변경",
-  "themeToggleClickHint": "클릭 시 순서대로 전환"
+  "themeToggleClickHint": "클릭 시 순서대로 전환",
+  "headerServiceDescription": "서비스 소개",
+  "about": {
+    "title": "서비스 소개",
+    "description": "한국 상장 미국 ETF의 프리미엄·NAV 분석, 매수/매도 신호, 프리미엄 추이·전략 시뮬레이션을 제공하는 무료 분석 도구입니다.",
+    "backToHome": "메인으로 돌아가기",
+    "sectionWhatTitle": "이 서비스는 무엇인가요?",
+    "sectionWhatContent": "본 플랫폼은 한국 거래소에 상장된 미국 지수 추종 ETF(예: TIGER 미국나스닥100, KODEX 미국S&P500, ACE 미국반도체 등)의 실시간 프리미엄(괴리율)을 분석하고, iNAV(실시간 추정 순자산가치) 기준 매수/매도 신호를 제공합니다. 시세 데이터는 NAVER 금융을 통해 조회할 수 있으며, 프리미엄 추이 차트·전략 시뮬레이션·동일 지수 ETF 비교 기능을 함께 제공합니다.",
+    "sectionFeaturesTitle": "제공 기능",
+    "featurePremium": "실시간 프리미엄(괴리율) 분석 및 iNAV 기반 추정 가격 계산",
+    "featureSignal": "프리미엄 구간별 매수/매도/관망 신호 안내",
+    "featureTrend": "과거 프리미엄 추이 차트 및 저평가·고평가 구간 해석",
+    "featureStrategy": "정액/정량 매매 전략 시뮬레이션",
+    "featureCompare": "같은 지수 추종 ETF 간 NAV·iNAV·프리미엄 비교",
+    "sectionTargetTitle": "누구를 위한 서비스인가요?",
+    "sectionTargetContent": "미국 지수 ETF를 거래하는 투자자, 프리미엄을 고려한 매매 타이밍을 찾고 싶은 분, 또는 동일 지수 ETF 중 우대 조건을 비교하고 싶은 분에게 유용합니다. 참고용 정보이며, 투자 판단은 본인 책임입니다.",
+    "sectionDisclaimerTitle": "면책 조항",
+    "sectionDisclaimerContent": "본 서비스의 수치와 신호는 참고용이며, 투자 권유나 예측을 목적으로 하지 않습니다. iNAV·프리미엄은 전일 NAV·지수·환율 등을 기반으로 한 추정값이며, 실제 공시 NAV·시장 상황과 다를 수 있습니다. 투자 결정은 반드시 본인의 판단과 책임 하에 이루어져야 합니다."
+  }
 }
