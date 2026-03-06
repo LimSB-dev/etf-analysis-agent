@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import {
   createContext,
   useCallback,
@@ -50,7 +51,7 @@ export function useLocaleState(): LocaleContextValue {
   return ctx
 }
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
+export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(defaultLocale)
 
   useEffect(() => {
@@ -72,8 +73,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <LocaleContext.Provider value={value}>
-      <NextIntlClientProvider 
-        locale={locale} 
+      <NextIntlClientProvider
+        locale={locale}
         messages={messages}
         timeZone="Asia/Seoul"
         now={new Date()}
