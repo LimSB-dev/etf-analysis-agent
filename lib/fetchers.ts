@@ -42,8 +42,20 @@ export function parsePrice(str: string | number): number {
   return Number.parseFloat(String(str).replace(/,/g, ""))
 }
 
-/** 네이버 국내 ETF 시세·NAV 조회 */
+/** 네이버 국내 ETF 시세·NAV 조회 (단일 종목) */
 export async function getNaverDomesticEtf(code: string): Promise<EtfMarketData> {
+  const map = await getNaverDomesticEtfBatch([code])
+  return map.get(code) ?? { symbol: code, price: 0, prevClose: 0, nav: 0 }
+}
+
+/**
+ * 네이버 국내 ETF 리스트 1회 조회 후 요청한 종목만 반환 (API 요청 1번으로 여러 ETF)
+ */
+export async function getNaverDomesticEtfBatch(codes: string[]): Promise<Map<string, EtfMarketData>> {
+  const result = new Map<string, EtfMarketData>()
+  for (const code of codes) {
+    result.set(code, { symbol: code, price: 0, prevClose: 0, nav: 0 })
+  }
   try {
     const url = "https://finance.naver.com/api/sise/etfItemList.nhn"
     const res = await fetch(url, {
@@ -55,34 +67,39 @@ export async function getNaverDomesticEtf(code: string): Promise<EtfMarketData> 
     })
     if (!res.ok) throw new Error(`Naver ETF API error: ${res.status}`)
     const data = await res.json()
-    const etfList = data?.result?.etfItemList ?? []
-    const etfItem = etfList.find((item: Record<string, unknown>) => item.itemcode === code)
-    if (!etfItem) throw new Error(`ETF not found: ${code}`)
-    const currentPrice = parsePrice(etfItem.nowVal ?? 0)
-    const nav = parsePrice(etfItem.nav ?? 0)
-    const changeRate = parsePrice(etfItem.changeRate ?? 0)
-    const prevClose = changeRate !== 0 ? currentPrice / (1 + changeRate / 100) : currentPrice
-    return { symbol: code, price: currentPrice, prevClose: Math.round(prevClose), nav }
+    const etfList = (data?.result?.etfItemList ?? []) as Record<string, unknown>[]
+    for (const code of codes) {
+      const etfItem = etfList.find((item: Record<string, unknown>) => item.itemcode === code)
+      if (!etfItem) continue
+      const currentPrice = parsePrice(etfItem.nowVal ?? 0)
+      const nav = parsePrice(etfItem.nav ?? 0)
+      const changeRate = parsePrice(etfItem.changeRate ?? 0)
+      const prevClose = changeRate !== 0 ? currentPrice / (1 + changeRate / 100) : currentPrice
+      result.set(code, { symbol: code, price: currentPrice, prevClose: Math.round(prevClose), nav })
+    }
   } catch (e) {
-    console.error(`Failed to fetch Naver ETF (${code}):`, e)
-    return { symbol: code, price: 0, prevClose: 0, nav: 0 }
+    console.error("Failed to fetch Naver ETF list:", e)
   }
+  return result
 }
 
-/** 네이버 해외 지수/ETF 시세 조회 */
+/** 네이버 해외 지수/ETF 시세 조회 (응답 필드명 변동에 대응) */
 export async function getNaverOverseas(symbol: string): Promise<MarketData> {
   try {
     const isIndex = INDEX_SYMBOLS.includes(symbol as (typeof INDEX_SYMBOLS)[number])
     const path = isIndex ? "worldstock/index" : "worldstock/etf"
     const url = `https://polling.finance.naver.com/api/realtime/${path}/${symbol}`
     const res = await fetch(url, { headers: UNCOMMON_HEADERS })
-    if (!res.ok) throw new Error(`Naver Overseas API error: ${res.status}`)
-    const responseData = await res.json()
-    const data = responseData.datas?.[0]
-    if (!data?.closePrice) throw new Error("Invalid data format")
-    const currentPrice = parsePrice(data.closePrice)
-    const fluctuationRate = parsePrice(data.fluctuationsRatio ?? 0)
-    const prevClose = currentPrice / (1 + fluctuationRate / 100)
+    if (!res.ok) return { symbol, price: 0, prevClose: 0 }
+    const responseData = (await res.json()) as Record<string, unknown>
+    const rawList = responseData.datas ?? responseData.data
+    const data = Array.isArray(rawList) ? (rawList[0] as Record<string, unknown>) : (rawList as Record<string, unknown>)
+    const priceRaw = data?.closePrice ?? data?.close_price ?? data?.lastPrice ?? data?.price ?? data?.currentPrice
+    if (priceRaw == null || priceRaw === "") return { symbol, price: 0, prevClose: 0 }
+    const currentPrice = parsePrice(priceRaw)
+    const ratioRaw = data?.fluctuationsRatio ?? data?.fluctuations_ratio ?? data?.changeRate ?? data?.change_rate ?? 0
+    const fluctuationRate = parsePrice(ratioRaw)
+    const prevClose = fluctuationRate !== 0 ? currentPrice / (1 + fluctuationRate / 100) : currentPrice
     return { symbol, price: currentPrice, prevClose: Number.parseFloat(prevClose.toFixed(2)) }
   } catch (e) {
     console.error(`Failed to fetch Naver Overseas (${symbol}):`, e)
