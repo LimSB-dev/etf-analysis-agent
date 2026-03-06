@@ -10,12 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { ETFS } from "@/lib/constants/etfs"
-import {
-  addSubscription,
-  clearTelegramState,
-  getTelegramState,
-  setTelegramState,
-} from "@/lib/subscriptions"
+import { addSubscription } from "@/lib/subscriptions"
 import {
   answerCallbackQuery,
   sendMessageWithKeyboard,
@@ -60,12 +55,12 @@ function buildEtfKeyboard(): InlineKeyboardButtonType[][] {
   ])
 }
 
-/** 2단계: 프리미엄 기준 선택 Keyboard */
-function buildThresholdKeyboard(): InlineKeyboardButtonType[][] {
+/** 2단계: 프리미엄 기준 선택 Keyboard (ticker 포함해 세션 없이 처리) */
+function buildThresholdKeyboard(ticker: string): InlineKeyboardButtonType[][] {
   return [
     PREMIUM_THRESHOLDS.map((p) => ({
       text: `${p}%`,
-      callback_data: `thresh:${p}`,
+      callback_data: `thresh:${p}:${ticker}`,
     })),
   ]
 }
@@ -83,7 +78,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 400 })
   }
 
-  // /start 또는 일반 메시지 → ETF 선택 화면
+  // /start → ETF 선택 화면
   if (update.message?.text === "/start") {
     const sent = await sendMessageWithKeyboard(
       chatId,
@@ -111,46 +106,41 @@ export async function POST(request: NextRequest) {
       await sendText(chatId, "선택한 ETF를 찾을 수 없습니다.")
       return NextResponse.json({ ok: true })
     }
-    await setTelegramState(chatId, {
-      step: 2,
-      selected_ticker: etf.ticker,
-      selected_name: etf.name,
-    })
     const sent = await sendMessageWithKeyboard(
       chatId,
       "괴리율이 선택한 값 이하로 내려가면 매수 알림을 보냅니다.\n프리미엄 기준을 선택하세요.",
-      buildThresholdKeyboard(),
+      buildThresholdKeyboard(etf.ticker),
     )
     return NextResponse.json({ ok: sent.ok })
   }
 
-  // 프리미엄 기준 선택: thresh:{-1|-1.5|-2}
+  // 프리미엄 기준 선택: thresh:{값}:{ticker} (세션 없이 버튼 데이터만 사용)
   if (data.startsWith("thresh:")) {
-    const value = data.slice(7)
+    const parts = data.slice(7).split(":")
+    const value = parts[0]
+    const ticker = parts[1]
     const threshold = Number.parseFloat(value)
     if (!Number.isFinite(threshold) || !PREMIUM_THRESHOLDS.includes(threshold as -1 | -1.5 | -2)) {
       await sendText(chatId, "잘못된 선택입니다. /start 로 다시 시작해 주세요.")
       return NextResponse.json({ ok: true })
     }
-
-    const state = await getTelegramState(chatId)
-    if (!state || state.step !== 2) {
-      await sendText(chatId, "세션이 만료되었습니다. /start 로 다시 시작해 주세요.")
+    const etf = ticker ? ETFS.find((e) => e.ticker === ticker) : null
+    if (!etf) {
+      await sendText(chatId, "선택한 ETF를 찾을 수 없습니다. /start 로 다시 시작해 주세요.")
       return NextResponse.json({ ok: true })
     }
 
     const added = await addSubscription({
       chat_id: chatId,
-      etf_ticker: state.selected_ticker,
+      etf_ticker: etf.ticker,
       premium_threshold: threshold,
     })
-    await clearTelegramState(chatId)
 
     if (added) {
       await sendText(
         chatId,
         `✅ 구독이 완료되었습니다.\n\n` +
-          `ETF: ${state.selected_name}\n` +
+          `ETF: ${etf.name}\n` +
           `괴리율 기준: ${threshold}% 이하 시 매수 알림\n\n` +
           `매일 평일 09:30에 조건을 확인해 알림을 보냅니다.`,
       )
