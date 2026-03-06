@@ -1,6 +1,6 @@
 "use server"
 
-import { ETF_OPTIONS, INDEX_SYMBOLS, INDEX_CHART_FALLBACK } from "@/lib/etf-options"
+import { ETF_OPTIONS, INDEX_SYMBOLS, INDEX_CHART_FALLBACK, type EtfOption } from "@/lib/etf-options"
 
 interface MarketData {
   symbol: string
@@ -151,6 +151,44 @@ export async function fetchMarketData(etfId?: string): Promise<FetchResult> {
   ])
 
   return { etf, index, fx }
+}
+
+export interface SameIndexEtfRowType {
+  etf: EtfOption
+  price: number
+  prevClose: number
+  nav: number
+}
+
+export interface SameIndexEtfComparisonResultType {
+  index: MarketData
+  fx: MarketData
+  etfs: SameIndexEtfRowType[]
+}
+
+/** 같은 지수 추종 ETF 일괄 조회 (지수·환율 1회, 각 ETF 국내 시세 병렬) */
+export async function fetchSameIndexEtfComparison(
+  indexSymbol: string,
+): Promise<SameIndexEtfComparisonResultType> {
+  const sameIndexEtfs = ETF_OPTIONS.filter((e) => e.indexSymbol === indexSymbol)
+  if (sameIndexEtfs.length === 0) {
+    return { index: { symbol: indexSymbol, price: 0, prevClose: 0 }, fx: { symbol: "USD/KRW", price: 0, prevClose: 0 }, etfs: [] }
+  }
+
+  const [index, fx, ...etfResults] = await Promise.all([
+    getNaverOverseas(indexSymbol),
+    getNaverFx("FX_USDKRW"),
+    ...sameIndexEtfs.map((etf) => getNaverDomesticEtf(etf.code)),
+  ])
+
+  const etfs: SameIndexEtfRowType[] = sameIndexEtfs.map((etf, i) => ({
+    etf,
+    price: etfResults[i].price,
+    prevClose: etfResults[i].prevClose,
+    nav: etfResults[i].nav,
+  }))
+
+  return { index, fx, etfs }
 }
 
 // --- Historical Premium Data ---
