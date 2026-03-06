@@ -24,10 +24,14 @@ const PREMIUM_THRESHOLDS = [-1, -1.5, -2] as const
 /** 매도 기준 옵션 (% 이상 시 매도 알림, 선택 사항) */
 const SELL_THRESHOLDS = [1, 1.5, 2] as const
 
-/** Telegram Update 타입 (필요한 필드만) */
+/** Telegram Update 타입 (필요한 필드만, 채널 포스트 포함) */
 interface TelegramUpdateType {
   update_id?: number
   message?: {
+    chat: { id: number }
+    text?: string
+  }
+  channel_post?: {
     chat: { id: number }
     text?: string
   }
@@ -41,6 +45,9 @@ interface TelegramUpdateType {
 function getChatId(update: TelegramUpdateType): number | null {
   if (update.message?.chat?.id != null) {
     return update.message.chat.id
+  }
+  if (update.channel_post?.chat?.id != null) {
+    return update.channel_post.chat.id
   }
   if (update.callback_query?.message?.chat?.id != null) {
     return update.callback_query.message.chat.id
@@ -94,8 +101,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 400 })
   }
 
-  // /start → ETF 선택 화면
-  if (update.message?.text === "/start") {
+  // /start (개인 채팅 또는 채널 포스트) → ETF 선택 화면
+  const isStart =
+    update.message?.text === "/start" || update.channel_post?.text === "/start"
+  if (isStart) {
     const sent = await sendMessageWithKeyboard(
       chatId,
       "알림 받을 ETF를 선택하세요.",

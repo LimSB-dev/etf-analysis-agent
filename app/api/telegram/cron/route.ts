@@ -1,13 +1,14 @@
 /**
  * CRON: 매일 평일 09:30 실행 (vercel.json cron)
- * - 모든 구독 조회 → /api/etfs 호출 → premium ≤ threshold 인 경우 Telegram 알림 발송
+ * - ETF 계산 후 채널 브로드캐스트로 메시지 전송 (구독 시스템은 사용하지 않음)
  * - Vercel Cron은 Authorization: Bearer ${CRON_SECRET} 헤더로 호출하므로, 동일 시크릿으로 검증 권장
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { listSubscriptions } from "@/lib/subscriptions"
-import { sendText } from "@/lib/telegram"
-import type { EtfApiItemType } from "@/app/api/etfs/route"
+import { getEtfList, type EtfApiItemType } from "@/lib/getEtfList"
+// 구독 시스템: 현재 미사용 (채널 브로드캐스트 방식)
+// import { listSubscriptions } from "@/lib/subscriptions"
+import { sendToChannel } from "@/lib/telegram"
 
 /** 숫자 포맷 (천 단위 구분, 소수는 premium만) */
 function formatPrice(value: number): string {
@@ -18,28 +19,23 @@ function formatPremium(value: number): string {
   return `${value.toFixed(2)}%`
 }
 
-/** 매수 알림 메시지 */
-function buildBuyAlertMessage(etf: EtfApiItemType): string {
-  return (
-    "📊 ETF 매수 신호\n\n" +
-    `${etf.name}\n\n` +
-    `현재가: ${formatPrice(etf.price)}\n` +
-    `적정가: ${formatPrice(etf.fairValue)}\n` +
-    `괴리율: ${formatPremium(etf.premium)}\n\n` +
-    "🟢 BUY SIGNAL"
-  )
-}
-
-/** 매도 알림 메시지 */
-function buildSellAlertMessage(etf: EtfApiItemType): string {
-  return (
-    "📊 ETF 매도 신호\n\n" +
-    `${etf.name}\n\n` +
-    `현재가: ${formatPrice(etf.price)}\n` +
-    `적정가: ${formatPrice(etf.fairValue)}\n` +
-    `괴리율: ${formatPremium(etf.premium)}\n\n` +
-    "🔴 SELL SIGNAL"
-  )
+/** ETF 목록을 한 메시지로 요약 (BUY/SELL 신호 포함) */
+function buildBroadcastMessage(etfList: EtfApiItemType[]): string {
+  const lines = ["📊 ETF 괴리율 알림", ""]
+  for (const etf of etfList) {
+    const signal =
+      etf.signal === "BUY"
+        ? "🟢 BUY"
+        : etf.signal === "SELL"
+          ? "🔴 SELL"
+          : "⚪ HOLD"
+    lines.push(
+      `${etf.name}\n` +
+        `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}`,
+    )
+    lines.push("")
+  }
+  return lines.join("\n").trimEnd()
 }
 
 export async function GET(request: NextRequest) {
@@ -53,60 +49,26 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const baseUrl =
-    process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-
   let etfList: EtfApiItemType[]
   try {
-    const res = await fetch(`${baseUrl}/api/etfs`, { cache: "no-store" })
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: "Failed to fetch ETF data", status: res.status },
-        { status: 502 },
-      )
-    }
-    etfList = (await res.json()) as EtfApiItemType[]
+    etfList = await getEtfList()
   } catch (e) {
     const err = e instanceof Error ? e.message : String(e)
     return NextResponse.json(
-      { error: "ETF API request failed", detail: err },
+      { error: "ETF data failed", detail: err },
       { status: 502 },
     )
   }
 
-  const subscriptions = await listSubscriptions()
-  if (subscriptions.length === 0) {
-    return NextResponse.json({ ok: true, sent: 0, message: "No subscriptions" })
+  const message = buildBroadcastMessage(etfList)
+  const result = await sendToChannel(message)
+
+  if (!result.ok) {
+    return NextResponse.json(
+      { error: "Telegram send failed", detail: result.error },
+      { status: 502 },
+    )
   }
 
-  const tickerMap = new Map(etfList.map((e) => [e.ticker, e]))
-  let sentCount = 0
-
-  for (const sub of subscriptions) {
-    const etf = tickerMap.get(sub.etf_ticker)
-    if (!etf) {
-      continue
-    }
-    // 매수: 괴리율이 설정 기준 이하일 때
-    if (etf.premium <= sub.premium_threshold) {
-      const result = await sendText(sub.chat_id, buildBuyAlertMessage(etf))
-      if (result.ok) {
-        sentCount += 1
-      }
-    }
-    // 매도: sell_threshold가 있고 괴리율이 설정 기준 이상일 때
-    if (
-      sub.sell_threshold != null &&
-      etf.premium >= sub.sell_threshold
-    ) {
-      const result = await sendText(sub.chat_id, buildSellAlertMessage(etf))
-      if (result.ok) {
-        sentCount += 1
-      }
-    }
-  }
-
-  return NextResponse.json({ ok: true, sent: sentCount })
+  return NextResponse.json({ ok: true, sent: 1 })
 }
