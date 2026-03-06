@@ -77,7 +77,8 @@ export function PremiumHistoryChart({ etfId, etfName, currentPremium, locale }: 
 
     load()
     return () => { cancelled = true }
-  }, [etfId, t.loadError])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- etfId만 바뀔 때만 fetch. t.loadError는 catch에서만 쓰이므로 의존성에서 제외
+  }, [etfId])
 
   useEffect(() => {
     if (!data || currentPremium === undefined || data.data.length === 0) {
