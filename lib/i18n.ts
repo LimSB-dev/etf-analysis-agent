@@ -25,6 +25,7 @@ export const translations = {
     autoFetchPrices: "실시간 시세 조회",
     selectEtf: "분석할 ETF 선택",
     baseIndex: "기초지수",
+    dataProvidedByNaver: "데이터 제공 NAVER",
 
     // ETF Groups
     nasdaq100Group: "Nasdaq 100 추종",
@@ -88,6 +89,7 @@ export const translations = {
     fairPriceIs: "의 실시간 추정 가격은",
     fairPriceEnd: "입니다",
     iNavDisclaimer: "이 값은 전일 NAV, 기초 ETF 수익률, 환율 변동을 기반으로 계산된 실시간 추정 가격입니다.",
+    navFuturesDisclaimer: "이 기준가는 선물 변동을 반영하지 않습니다.",
 
     // Optional tabs (재미 + 정보)
     premiumTrendTab: "프리미엄 추이",
@@ -106,7 +108,7 @@ export const translations = {
 
     // Alerts
     someDataMissing:
-      "일부 데이터를 자동으로 가져올 수 없습니다. 누락된 값을 직접 입력해주세요.",
+      "주당 시장가격 또는 기준가(NAV)를 가져오지 못했습니다. 네트워크를 확인하거나 잠시 후 다시 조회해주세요. 필요하면 해당 값을 직접 입력할 수 있습니다.",
     fetchFailed:
       "시장 데이터를 가져오지 못했습니다. 다시 시도해주세요.",
     invalidInput: "모든 필드에 유효한 양수를 입력해주세요.",
@@ -135,6 +137,7 @@ export const translations = {
     autoFetchPrices: "Fetch Latest Prices",
     selectEtf: "Select ETF to Analyze",
     baseIndex: "Base Index",
+    dataProvidedByNaver: "Data provided by NAVER",
 
     // ETF Groups
     nasdaq100Group: "Nasdaq 100 Tracking",
@@ -197,6 +200,7 @@ export const translations = {
     fairPriceIs: "'s real-time estimated price is",
     fairPriceEnd: "",
     iNavDisclaimer: "This value is a real-time estimated price calculated based on previous day's NAV, underlying ETF returns, and FX changes.",
+    navFuturesDisclaimer: "This reference price does not reflect futures movement.",
 
     // Optional tabs
     premiumTrendTab: "Premium Trend",
@@ -215,7 +219,7 @@ export const translations = {
 
     // Alerts
     someDataMissing:
-      "Some data could not be fetched automatically. Please enter the missing values manually.",
+      "Could not fetch market price or NAV. Check your connection or try again later. You can also enter the values manually if needed.",
     fetchFailed:
       "Failed to fetch market data. Please try again.",
     invalidInput: "Please enter valid positive numbers for all fields.",

@@ -1,6 +1,6 @@
 "use server"
 
-import { ETF_OPTIONS } from "@/lib/etf-options"
+import { ETF_OPTIONS, INDEX_SYMBOLS, INDEX_CHART_FALLBACK } from "@/lib/etf-options"
 
 interface MarketData {
   symbol: string
@@ -82,9 +82,10 @@ async function getNaverDomesticEtf(code: string): Promise<EtfMarketData> {
 
 async function getNaverOverseas(symbol: string): Promise<MarketData> {
   try {
-    // Naver Mobile Internal API for Overseas Stocks
-    // symbol for QQQ is usually just 'QQQ' but endpoint needs 'NAS/QQQ'
-    const url = `https://polling.finance.naver.com/api/realtime/worldstock/etf/${symbol}`
+    // 지수(NDX, SPX, SOX)는 worldstock/index, ETF는 worldstock/etf
+    const isIndex = INDEX_SYMBOLS.includes(symbol as (typeof INDEX_SYMBOLS)[number])
+    const path = isIndex ? "worldstock/index" : "worldstock/etf"
+    const url = `https://polling.finance.naver.com/api/realtime/${path}/${symbol}`
     const res = await fetch(url, { headers: UNCOMMON_HEADERS, next: { revalidate: 60 } })
 
     if (!res.ok) throw new Error(`Naver Overseas API error: ${res.status}`)
@@ -214,37 +215,37 @@ async function getNaverDomesticChart(code: string, count = 60): Promise<ChartPoi
   }
 }
 
-async function getNaverOverseasChart(symbol: string, count = 60): Promise<ChartPoint[]> {
-  try {
-    // API typically supports up to 900 count
-    const safeCount = Math.min(count, 900)
-    const url = `https://api.stock.naver.com/chart/foreign/item/${symbol}?periodType=dayCandle&count=${safeCount}`
-    const res = await fetch(url, {
-      headers: {
-        ...COMMON_HEADERS,
-        Origin: "https://m.stock.naver.com",
-      },
-    })
-    if (!res.ok) {
-      const text = await res.text()
-      console.error(`[v0] Overseas chart response (${res.status}):`, text.slice(0, 200))
-      throw new Error(`Naver Overseas Chart API error: ${res.status}`)
-    }
-    const data = await res.json()
-
-    console.log("[v0] Overseas chart raw sample:", JSON.stringify(data).slice(0, 500))
-
-    // Handle different response formats
-    const items = Array.isArray(data) ? data : (data?.priceInfos || data?.result || [])
-    if (!Array.isArray(items) || items.length === 0) throw new Error("Invalid overseas chart data format")
-
-    return items.map((item: Record<string, unknown>) => {
+async function fetchOverseasChartOnce(path: string, symbol: string, safeCount: number): Promise<ChartPoint[]> {
+  const url = `https://api.stock.naver.com/chart/${path}/${symbol}?periodType=dayCandle&count=${safeCount}`
+  const res = await fetch(url, {
+    headers: { ...COMMON_HEADERS, Origin: "https://m.stock.naver.com" },
+  })
+  if (!res.ok) return []
+  const data = await res.json()
+  const items = Array.isArray(data) ? data : (data?.priceInfos || data?.result || [])
+  if (!Array.isArray(items) || items.length === 0) return []
+  return items
+    .map((item: Record<string, unknown>) => {
       const dateRaw = (item.localDate || item.localTradedAt || item.date || "") as string
       const dateStr = dateRaw.includes("-") ? dateRaw.split("T")[0] : dateRaw.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")
       const closeRaw = item.closePrice ?? item.close ?? 0
       const close = typeof closeRaw === "number" ? closeRaw : parsePrice(String(closeRaw))
       return { date: dateStr, close }
-    }).filter((p: ChartPoint) => p.date && p.close > 0)
+    })
+    .filter((p: ChartPoint) => p.date && p.close > 0)
+}
+
+async function getNaverOverseasChart(symbol: string, count = 60): Promise<ChartPoint[]> {
+  const safeCount = Math.min(count, 900)
+  const isIndex = INDEX_SYMBOLS.includes(symbol as (typeof INDEX_SYMBOLS)[number])
+  const path = isIndex ? "foreign/index" : "foreign/item"
+  try {
+    let points = await fetchOverseasChartOnce(path, symbol, safeCount)
+    if (points.length === 0 && isIndex && symbol in INDEX_CHART_FALLBACK) {
+      const fallbackSymbol = INDEX_CHART_FALLBACK[symbol as keyof typeof INDEX_CHART_FALLBACK]
+      points = await fetchOverseasChartOnce("foreign/item", fallbackSymbol, safeCount)
+    }
+    return points
   } catch (e) {
     console.error(`Failed to fetch overseas chart (${symbol}):`, e)
     return []
