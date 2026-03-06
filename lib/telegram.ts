@@ -1,10 +1,13 @@
 /**
  * Telegram Bot API 래퍼
  * - 메시지 전송, Inline Keyboard 전송
- * - 환경변수: TELEGRAM_BOT_TOKEN
+ * - 환경변수: TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID(선택, 채널 브로드캐스트용)
  */
 
 const TELEGRAM_API_BASE = "https://api.telegram.org"
+
+/** 채널 브로드캐스트용 기본 chat_id (TELEGRAM_CHANNEL_ID 미설정 시 사용) */
+const DEFAULT_CHANNEL_ID = -1003863145180
 
 export interface InlineKeyboardButtonType {
   text: string
@@ -55,6 +58,29 @@ export async function sendTelegramMessage(
     const err = e instanceof Error ? e.message : String(e)
     return { ok: false, error: err }
   }
+}
+
+/**
+ * 브로드캐스트용 채널 chat_id 반환 (TELEGRAM_CHANNEL_ID 또는 기본값)
+ */
+export function getChannelId(): number {
+  const raw = process.env.TELEGRAM_CHANNEL_ID
+  if (raw != null && raw !== "") {
+    const n = Number.parseInt(raw, 10)
+    if (Number.isFinite(n)) {
+      return n
+    }
+  }
+  return DEFAULT_CHANNEL_ID
+}
+
+/**
+ * 채널로 메시지 전송 (브로드캐스트)
+ */
+export async function sendToChannel(
+  text: string,
+): Promise<{ ok: boolean; error?: string }> {
+  return sendText(getChannelId(), text)
 }
 
 /**
