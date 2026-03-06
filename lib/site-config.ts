@@ -2,18 +2,22 @@
 export const GITHUB_ISSUES_URL =
   process.env.NEXT_PUBLIC_GITHUB_ISSUES_URL ?? "https://github.com/LimSB-dev/v0-etf-analysis-agent/issues";
 
+/** 실시간 알람 기능 요청 이슈 페이지 (Issue #12) */
+export const ALERT_REQUEST_ISSUE_URL =
+  "https://github.com/LimSB-dev/v0-etf-analysis-agent/issues/12";
+
+/** GitHub 프로필 URL (푸터 등) */
+export const GITHUB_PROFILE_URL = "https://github.com/LimSB-dev";
+
+/** Canary Lab (블로그) URL */
+export const CANARY_LAB_URL = "https://canary-lab.vercel.app/";
+
+/** 푸터 라벨: Canary Lab */
+export const CANARY_LAB_LABEL = "Canary Lab";
+
 /** 문의 메일 (환경변수 NEXT_PUBLIC_CONTACT_EMAIL 로 설정) */
 export const CONTACT_EMAIL =
   process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "mae03087@naver.com";
-
-/** 알람 신청용 GitHub 새 이슈 URL (title, body 인코딩) */
-export function getAlertRequestIssueUrl(title: string, body: string): string {
-  const base = GITHUB_ISSUES_URL.replace(/\/issues\/?$/, "");
-  const q = new URLSearchParams();
-  q.set("title", title);
-  q.set("body", body);
-  return `${base}/issues/new?${q.toString()}`;
-}
 
 /** 알람 신청용 mailto (subject, body 한 줄로 정리 후 인코딩) */
 export function getAlertRequestMailto(subject: string, body: string): string {

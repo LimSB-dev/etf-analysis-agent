@@ -83,6 +83,11 @@ export const SameIndexEtfComparison = ({
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}%`;
+  const fmtGap = (num: number) =>
+    `${num >= 0 ? "+" : ""}${num.toLocaleString(locale === "ko" ? "ko-KR" : "en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })}`;
 
   if (loading) {
     return (
@@ -143,8 +148,8 @@ export const SameIndexEtfComparison = ({
             <tr className="bg-gray-50 dark:bg-gray-800/50 text-left text-gray-600 dark:text-gray-400">
               <th className="px-4 py-3 font-medium">{t("sameIndexComparisonEtfName")}</th>
               <th className="px-4 py-3 font-medium text-right">{t("currentPrice")}</th>
-              <th className="px-4 py-3 font-medium text-right">{t("sameIndexComparisonNav")}</th>
               <th className="px-4 py-3 font-medium text-right">{t("sameIndexComparisonINav")}</th>
+              <th className="px-4 py-3 font-medium text-right">{t("sameIndexComparisonGap")}</th>
               <th className="px-4 py-3 font-medium text-right">{t("currentPremium")}</th>
               <th className="px-4 py-3 font-medium text-center">{t("signal")}</th>
             </tr>
@@ -161,11 +166,16 @@ export const SameIndexEtfComparison = ({
                 <td className="px-4 py-3 text-right tabular-nums">
                   ₩{fmtKrw(row.price)}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-gray-600 dark:text-gray-400">
-                  ₩{fmtKrw(row.nav)}
-                </td>
                 <td className="px-4 py-3 text-right tabular-nums text-blue-600 dark:text-blue-400">
                   ₩{fmtKrw(Math.round(row.iNav))}
+                </td>
+                {/* 괴리율 -면 빨강, +면 파랑 */}
+                <td className={`px-4 py-3 text-right tabular-nums ${
+                  Math.round(row.price) - Math.round(row.iNav) > 0
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-green-600 dark:text-green-400"
+                }`}>
+                  {fmtGap(Math.round(row.price) - Math.round(row.iNav))}
                 </td>
                 <td
                   className={`px-4 py-3 text-right tabular-nums font-medium ${

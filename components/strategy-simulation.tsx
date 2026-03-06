@@ -18,7 +18,7 @@ import type { Locale } from "@/lib/i18n/config"
 const t = {
   ko: {
     sectionTitle: "전략 시뮬레이션",
-    sectionDesc: "과거 데이터 기반으로 매매 신호 전략의 성과를 검증합니다",
+    sectionDesc: "과거 데이터 기반으로 프리미엄 매매 신호 전략의 성과를 검증합니다",
     period1m: "1개월",
     period3m: "3개월",
     period6m: "약 6개월",
@@ -37,7 +37,7 @@ const t = {
     strategy: "전략",
     buyHold: "단순 보유",
     noData: "시뮬레이션할 데이터가 부족합니다.",
-    disclaimer: "이 결과는 추정 공정가치를 기반으로 한 과거 시뮬레이션이며 미래 수익을 보장하지 않습니다. 실제 거래 시에는 공식 NAV를 참고하세요.",
+    disclaimer: "이 결과는 추정 공정가치를 기반으로 한 과거 시뮬레이션이며 미래 수익을 보장하지 않습니다.",
     tradeHistory: "거래 내역",
     buyDate: "매수일",
     sellDate: "매도일",
@@ -51,6 +51,7 @@ const t = {
     analysisPeriod: "분석 기간",
     totalDays: "거래일",
     tradingStrategy: "매매 전략 설정",
+    strategyThresholdHint: "아래 숫자는 프리미엄(%) 기준이며, 이 값 이하일 때 매수·이상일 때 매도 신호로 사용됩니다.",
     buyWhen: "매수",
     sellWhen: "매도",
     premiumBelow: "프리미엄",
@@ -60,7 +61,7 @@ const t = {
   },
   en: {
     sectionTitle: "Strategy Simulation",
-    sectionDesc: "Backtest the signal strategy with historical data",
+    sectionDesc: "Backtest the premium-based signal strategy with historical data",
     period1m: "1M",
     period3m: "3M",
     period6m: "~6M",
@@ -79,7 +80,7 @@ const t = {
     strategy: "Strategy",
     buyHold: "Buy & Hold",
     noData: "Insufficient data for simulation.",
-    disclaimer: "This is a historical simulation based on estimated fair value and does not guarantee future returns. Please refer to official NAV for actual trading.",
+    disclaimer: "This is a historical simulation based on estimated fair value and does not guarantee future returns.",
     tradeHistory: "Trade History",
     buyDate: "Buy Date",
     sellDate: "Sell Date",
@@ -93,6 +94,7 @@ const t = {
     analysisPeriod: "Analysis Period",
     totalDays: "Trading Days",
     tradingStrategy: "Trading Strategy",
+    strategyThresholdHint: "Numbers are premium (%) thresholds: buy when premium ≤ value, sell when ≥ value.",
     buyWhen: "Buy",
     sellWhen: "Sell",
     premiumBelow: "Premium ≤",
@@ -309,7 +311,9 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
               <span className="text-gray-500 dark:text-gray-400">%</span>
             </div>
           </div>
-
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5" role="note" aria-label={labels.strategyThresholdHint}>
+            {labels.strategyThresholdHint}
+          </p>
           {/* Period selector + Run button */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-1">
@@ -736,9 +740,9 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
 
           {/* Disclaimer */}
           <div className="px-6 pb-6">
-            <div className="rounded-lg px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
               {labels.disclaimer}
-            </div>
+            </p>
           </div>
         </div>
       )}
