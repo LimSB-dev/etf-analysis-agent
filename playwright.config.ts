@@ -29,15 +29,21 @@ export default defineConfig({
       testIgnore: [/calculator-data\.spec\.ts/],
     },
   ],
-  // CI: 서버 없음(별도 구동). 로컬: 이미 서버가 떠 있으면 재사용(reuseExistingServer).
-  // 로컬에서 dev 서버를 직접 켜둔 채 테스트만 하려면: NO_WEB_SERVER=1 npm run test:e2e
+  // CI: build 후 npm run start로 서버 기동. 로컬: dev 서버 또는 NO_WEB_SERVER=1 로 별도 기동
   webServer:
-    process.env.CI || process.env.NO_WEB_SERVER
+    process.env.NO_WEB_SERVER
       ? undefined
-      : {
-          command: "npm run dev",
-          url: "http://localhost:3000",
-          reuseExistingServer: true,
-          timeout: 120_000,
-        },
+      : process.env.CI
+        ? {
+            command: "npm run start",
+            url: "http://localhost:3000",
+            reuseExistingServer: false,
+            timeout: 120_000,
+          }
+        : {
+            command: "npm run dev",
+            url: "http://localhost:3000",
+            reuseExistingServer: true,
+            timeout: 120_000,
+          },
 });
