@@ -7,18 +7,22 @@ import { ThemeToggle } from "@/components/ThemeToggle"
 interface EtfCalculatorPageHeaderProps {
   pageTitle: string
   headerServiceDescription: string
-  locale: string
+  localeSwitchAriaLabel: string
   onLocaleToggle: () => void
 }
 
 export const EtfCalculatorPageHeader = ({
   pageTitle,
   headerServiceDescription,
-  locale,
+  localeSwitchAriaLabel,
   onLocaleToggle,
 }: EtfCalculatorPageHeaderProps) => {
   return (
-    <div className="relative flex flex-row justify-between items-start gap-3 pb-2 ">
+    <header
+      className="relative flex flex-row justify-between items-start gap-3 pb-2"
+      role="banner"
+      aria-label={pageTitle}
+    >
       <div className="min-w-0 flex-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl">
           {pageTitle}
@@ -37,13 +41,12 @@ export const EtfCalculatorPageHeader = ({
           type="button"
           onClick={onLocaleToggle}
           className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300 transition-colors shrink-0"
-          aria-label={locale === "ko" ? "Switch to English" : "한국어로 전환"}
-          title={locale === "ko" ? "English" : "한국어"}
+          aria-label={localeSwitchAriaLabel}
         >
           <Globe className="w-2.5 h-2.5 opacity-80" />
-          <span className="sr-only">{locale === "ko" ? "EN" : "KO"}</span>
+          <span className="sr-only">{localeSwitchAriaLabel}</span>
         </button>
       </div>
-    </div>
+    </header>
   )
 }

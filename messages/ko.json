@@ -94,7 +94,10 @@
   "themeSystem": "시스템",
   "themeToggleLabel": "테마 변경",
   "themeToggleClickHint": "클릭 시 순서대로 전환",
+  "localeSwitchToEn": "Switch to English",
+  "localeSwitchToKo": "한국어로 전환",
   "headerServiceDescription": "서비스 소개",
+  "extraTabsRegionLabel": "추가 분석",
   "about": {
     "title": "서비스 소개",
     "description": "한국 상장 미국 ETF의 프리미엄·NAV 분석, 매수/매도 신호, 프리미엄 추이·전략 시뮬레이션을 제공하는 무료 분석 도구입니다.",
