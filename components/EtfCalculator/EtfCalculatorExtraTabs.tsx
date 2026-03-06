@@ -12,6 +12,7 @@ interface EtfCalculatorExtraTabsProps {
   premiumTrendTab: string
   strategySimulationTab: string
   sameIndexComparisonTab: string
+  extraTabsRegionLabel: string
   locale: Locale
 }
 
@@ -19,6 +20,7 @@ export const EtfCalculatorExtraTabs = ({
   premiumTrendTab,
   strategySimulationTab,
   sameIndexComparisonTab,
+  extraTabsRegionLabel,
   locale,
 }: EtfCalculatorExtraTabsProps) => {
   const dispatch = useAppDispatch()
@@ -38,7 +40,7 @@ export const EtfCalculatorExtraTabs = ({
   if (!selectedEtf) return null
 
   return (
-    <div className="mt-8">
+    <section className="mt-8" aria-label={extraTabsRegionLabel}>
       <div className="flex flex-wrap gap-2 mb-4">
         <button
           type="button"
@@ -87,6 +89,6 @@ export const EtfCalculatorExtraTabs = ({
           locale={locale}
         />
       )}
-    </div>
+    </section>
   )
 }

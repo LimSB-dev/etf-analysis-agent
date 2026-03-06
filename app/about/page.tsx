@@ -19,7 +19,10 @@ export default function AboutPage() {
           {t("backToHome")}
         </Link>
 
-        <article className="prose prose-gray dark:prose-invert max-w-none">
+        <article
+          className="prose prose-gray dark:prose-invert max-w-none"
+          aria-label={t("title")}
+        >
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl mb-2">
             {t("title")}
           </h1>

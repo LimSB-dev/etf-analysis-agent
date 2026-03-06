@@ -149,16 +149,22 @@ export function EtfCalculator() {
       <EtfCalculatorPageHeader
         pageTitle={pageTitle}
         headerServiceDescription={t("headerServiceDescription")}
-        locale={locale}
+        localeSwitchAriaLabel={
+          locale === "ko" ? t("localeSwitchToEn") : t("localeSwitchToKo")
+        }
         onLocaleToggle={() => setLocale(locale === "ko" ? "en" : "ko")}
       />
 
-      <div className="bg-white dark:bg-gray-900 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
+      <section
+        className="bg-white dark:bg-gray-900 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800"
+        aria-labelledby="etf-premium-analysis-heading"
+      >
         <div className="p-6 md:p-8 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
           <div className="space-y-6">
             <div className="flex flex-col gap-4 mb-4">
               <div className="flex flex-row justify-between items-center gap-4">
                 <h2
+                  id="etf-premium-analysis-heading"
                   ref={etfSelectorRef}
                   className="text-lg font-bold text-gray-900 dark:text-gray-100"
                 >
@@ -169,6 +175,7 @@ export function EtfCalculator() {
                   onClick={handleFetchData}
                   disabled={isLoading}
                   className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  aria-label={isLoading ? t("fetchingData") : t("autoFetchPrices")}
                 >
                   <RefreshCw
                     className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
@@ -179,14 +186,19 @@ export function EtfCalculator() {
             </div>
 
             <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label
+                htmlFor="etf-select"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
                 {t("selectEtf")}
               </label>
               <div className="relative">
                 <select
+                  id="etf-select"
                   value={selectedEtf.id}
                   onChange={(e) => handleEtfChange(e.target.value)}
                   className="w-full appearance-none rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-4 py-3 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  aria-label={t("selectEtf")}
                 >
                   {optionsByGroup.map((group) => (
                     <optgroup key={group.label} label={group.label}>
@@ -417,13 +429,14 @@ export function EtfCalculator() {
             )}
           </div>
         </div>
-      </div>
+      </section>
 
       {(inputs.etfPrev || extraTab) && (
         <EtfCalculatorExtraTabs
           premiumTrendTab={t("premiumTrendTab")}
           strategySimulationTab={t("strategySimulationTab")}
           sameIndexComparisonTab={t("sameIndexComparisonTab")}
+          extraTabsRegionLabel={t("extraTabsRegionLabel")}
           locale={locale}
         />
       )}
