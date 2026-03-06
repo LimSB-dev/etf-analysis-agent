@@ -266,7 +266,7 @@ export function EtfCalculator() {
 
   useEffect(() => {
     const handleScroll = () => {
-      if (etfSelectorRef.current) {
+      if (etfSelectorRef.current && selectedEtf) {
         const rect = etfSelectorRef.current.getBoundingClientRect();
         setShowSticky(rect.bottom < 0);
       }
@@ -274,7 +274,7 @@ export function EtfCalculator() {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [ selectedEtf ]);
 
   return (
     <div className="space-y-6">
@@ -378,7 +378,7 @@ export function EtfCalculator() {
           <div className="space-y-6">
             <div className="flex flex-col gap-4 mb-4">
               <div className="flex flex-row justify-between items-center gap-4">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <h2 ref={etfSelectorRef} className="text-lg font-bold text-gray-900 dark:text-gray-100">
                   {t("premiumAnalysis")}
                 </h2>
                 <button
@@ -396,7 +396,7 @@ export function EtfCalculator() {
             </div>
 
             {/* ETF Selector */}
-            <div className="relative" ref={etfSelectorRef}>
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t("selectEtf")}
               </label>

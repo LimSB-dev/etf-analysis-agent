@@ -16,6 +16,9 @@ export interface EquityCurvePoint {
   strategy: number // cumulative return %
   buyHold: number // cumulative return %
   signal?: "BUY" | "SELL" | null
+  premium?: number // premium % for tooltip
+  etfClose?: number // ETF closing price for tooltip
+  nav?: number // NAV for tooltip
 }
 
 export interface BacktestResult {
@@ -37,6 +40,8 @@ export interface BacktestResult {
     startDate: string
     endDate: string
     totalDays: number
+    premiumMin: number
+    premiumMax: number
   }
 }
 
@@ -282,6 +287,8 @@ export async function runBacktest(
         startDate: "",
         endDate: "",
         totalDays: 0,
+        premiumMin: 0,
+        premiumMax: 0,
       },
     }
   }
@@ -317,9 +324,14 @@ export async function runBacktest(
         startDate: "",
         endDate: "",
         totalDays: 0,
+        premiumMin: 0,
+        premiumMax: 0,
       },
     }
   }
+
+  const premiumMin = Math.min(...trimmedData.map((d) => d.premium))
+  const premiumMax = Math.max(...trimmedData.map((d) => d.premium))
 
   // --- Simulate ---
   const initialCapital = 10_000_000
@@ -332,15 +344,20 @@ export async function runBacktest(
 
   const firstPrice = trimmedData[0].etfClose
 
+  // 정상: 매수 기준 < 매도 기준 → 프리미엄 낮을 때 매수, 높을 때 매도
+  // 반대: 매수 기준 > 매도 기준 → 프리미엄 높을 때 매수, 낮을 때 매도(역전략, 수익률 나쁨)
+  const isReversed = buyThreshold > sellThreshold
+
   for (let i = 0; i < trimmedData.length; i++) {
     const day = trimmedData[i]
-    const signal =
-      day.premium <= buyThreshold ? "BUY" : day.premium >= sellThreshold ? "SELL" : null
+    const signal = isReversed
+      ? (day.premium >= buyThreshold ? "BUY" : day.premium <= sellThreshold ? "SELL" : null)
+      : (day.premium <= buyThreshold ? "BUY" : day.premium >= sellThreshold ? "SELL" : null)
 
     let signalMark: "BUY" | "SELL" | null = null
 
-    if (signal === "BUY" && shares === 0) {
-      // Buy with all available cash
+    if (signal === "BUY" && shares === 0 && i > 0) {
+      // Buy with all available cash (skip first day to avoid buying on start regardless of threshold)
       shares = Math.floor(cash / day.etfClose)
       if (shares > 0) {
         buyPrice = day.etfClose
@@ -374,6 +391,8 @@ export async function runBacktest(
       strategy: Number(strategyReturn.toFixed(2)),
       buyHold: Number(buyHoldReturn.toFixed(2)),
       signal: signalMark,
+      premium: day.premium,
+      etfClose: day.etfClose,
     })
   }
 
@@ -404,12 +423,21 @@ export async function runBacktest(
       minTradeReturn: completedReturns.length > 0 ? Math.min(...completedReturns) : 0,
       strategyReturn: Number(strategyReturn.toFixed(2)),
       buyHoldReturn: Number(buyHoldReturn.toFixed(2)),
-      excessReturn: Number((strategyReturn - buyHoldReturn).toFixed(2)),
+      excessReturn: (() => {
+        const denom = 1 + buyHoldReturn / 100
+        if (denom === 0) {
+          return Number((strategyReturn - buyHoldReturn).toFixed(2))
+        }
+        const geometricExcess = ((1 + strategyReturn / 100) / denom - 1) * 100
+        return Number(geometricExcess.toFixed(2))
+      })(),
     },
     period: {
       startDate: trimmedData[0].date,
       endDate: trimmedData[trimmedData.length - 1].date,
       totalDays: trimmedData.length,
+      premiumMin: Number(premiumMin.toFixed(2)),
+      premiumMax: Number(premiumMax.toFixed(2)),
     },
   }
 }

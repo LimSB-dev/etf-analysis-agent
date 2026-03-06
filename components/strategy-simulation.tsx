@@ -45,19 +45,22 @@ const t = {
     sellPrice: "매도가",
     returnPct: "수익률",
     noTrades: "해당 기간에 발생한 거래가 없습니다.",
-    excessReturnTooltip: "초과 수익은 전략 수익률에서 단순 보유 수익률을 뺀 값입니다. 양수면 전략이 더 좋은 성과를, 음수면 단순 보유가 더 좋은 성과를 냈다는 의미입니다.",
+    excessReturnTooltip: "초과 수익은 (1+전략수익률)/(1+단순보유수익률)−1 로 계산한 상대 수익률입니다. 퍼센트 포인트 차이가 아니라 복리 기준의 초과 성과를 나타냅니다. 양수면 전략이, 음수면 단순 보유가 더 좋은 성과를 냈다는 의미입니다.",
     analysisMethod: "추정 공정가치 기반 시뮬레이션",
     analysisMethodTooltip: "이 시뮬레이션은 과거 지수/환율 데이터를 기반으로 ETF의 이론적 공정가치를 추정하여 프리미엄/디스카운트를 계산합니다. 실제 운용사 공시 NAV와는 차이가 있을 수 있으며, 과거 데이터이므로 미래 수익을 보장하지 않습니다.",
     analysisPeriod: "분석 기간",
     totalDays: "거래일",
     tradingStrategy: "매매 전략 설정",
-    strategyThresholdHint: "아래 숫자는 프리미엄(%) 기준이며, 이 값 이하일 때 매수·이상일 때 매도 신호로 사용됩니다.",
     buyWhen: "매수",
     sellWhen: "매도",
     premiumBelow: "프리미엄",
     premiumAbove: "프리미엄",
     orLess: "이하",
     orMore: "이상",
+    premium: "프리미엄",
+    closingPrice: "종가",
+    criteria: "기준",
+    premiumRangeHint: "이 기간 프리미엄 범위",
   },
   en: {
     sectionTitle: "Strategy Simulation",
@@ -88,19 +91,22 @@ const t = {
     sellPrice: "Sell Price",
     returnPct: "Return",
     noTrades: "No trades occurred in this period.",
-    excessReturnTooltip: "Excess return is the strategy return minus buy & hold return. Positive means the strategy performed better, negative means buy & hold performed better.",
+    excessReturnTooltip: "Excess return is the relative outperformance: (1+strategy return)/(1+buy & hold return)−1, i.e. geometric excess, not a simple percentage-point difference. Positive means the strategy outperformed, negative means buy & hold did.",
     analysisMethod: "Estimated Fair Value Based Simulation",
     analysisMethodTooltip: "This simulation estimates theoretical fair value based on historical index/FX data to calculate premium/discount. Actual NAV from fund companies may differ, and past results do not guarantee future returns.",
     analysisPeriod: "Analysis Period",
     totalDays: "Trading Days",
     tradingStrategy: "Trading Strategy",
-    strategyThresholdHint: "Numbers are premium (%) thresholds: buy when premium ≤ value, sell when ≥ value.",
     buyWhen: "Buy",
     sellWhen: "Sell",
     premiumBelow: "Premium ≤",
     premiumAbove: "Premium ≥",
     orLess: "",
     orMore: "",
+    premium: "Premium",
+    closingPrice: "Price",
+    criteria: "threshold",
+    premiumRangeHint: "Premium range this period",
   },
 } as const
 
@@ -125,10 +131,18 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
   const [autoRun, setAutoRun] = useState(true)
   const [showTooltip, setShowTooltip] = useState(false)
   const [showExcessTooltip, setShowExcessTooltip] = useState(false)
+  const [premiumRangeByPeriod, setPremiumRangeByPeriod] = useState<Record<Period, { min: number; max: number }>>({} as Record<Period, { min: number; max: number }>)
+  const [resultsRevealed, setResultsRevealed] = useState(false)
   const prevEtfIdRef = useRef<string>(etfId)
+  const runStartedForRef = useRef<string | null>(null)
 
   const getCacheKey = (p: Period, buy: number, sell: number) => `${p}_${buy}_${sell}`
   const result = resultsCache[getCacheKey(period, buyThreshold, sellThreshold)]
+  const premiumRange = premiumRangeByPeriod[period]
+  const DEFAULT_PREMIUM_MIN = -50
+  const DEFAULT_PREMIUM_MAX = 50
+  const inputMin = premiumRange ? premiumRange.min : DEFAULT_PREMIUM_MIN
+  const inputMax = premiumRange ? premiumRange.max : DEFAULT_PREMIUM_MAX
 
   const periods: { value: Period; label: string }[] = [
     { value: "1m", label: labels.period1m },
@@ -137,6 +151,7 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
   ]
 
   const handleRun = useCallback(async () => {
+    setResultsRevealed(false)
     setIsLoading(true)
     setShowTrades(false)
     setAutoRun(true)
@@ -147,30 +162,52 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
         ...prev,
         [cacheKey]: data,
       }))
+      setPremiumRangeByPeriod((prev) => ({
+        ...prev,
+        [period]: { min: data.period.premiumMin, max: data.period.premiumMax },
+      }))
     } catch (e) {
       console.error("Backtest failed:", e)
     } finally {
+      runStartedForRef.current = null
       setIsLoading(false)
     }
   }, [etfId, period, buyThreshold, sellThreshold])
 
   useEffect(() => {
+    if (!isLoading && result && result.equityCurve.length > 0) {
+      const id = requestAnimationFrame(() => {
+        setResultsRevealed(true)
+      })
+      return () => cancelAnimationFrame(id)
+    }
+    if (isLoading) {
+      setResultsRevealed(false)
+    }
+  }, [isLoading, result])
+
+  useEffect(() => {
     if (prevEtfIdRef.current !== etfId) {
       const hadAutoRun = autoRun
       setResultsCache({})
+      setPremiumRangeByPeriod({} as Record<Period, { min: number; max: number }>)
       setBuyInput(buyThreshold.toString())
       setSellInput(sellThreshold.toString())
       prevEtfIdRef.current = etfId
-      
       if (hadAutoRun) {
+        // 캐시 비우면 autoRun useEffect가 handleRun()을 호출하므로, 먼저 로딩으로 막아 중복 호출 방지
+        setIsLoading(true)
         const timer = setTimeout(() => {
-          setIsLoading(true)
           runBacktest(etfId, period, buyThreshold, sellThreshold)
             .then((data) => {
               const cacheKey = getCacheKey(period, buyThreshold, sellThreshold)
               setResultsCache((prev) => ({
                 ...prev,
                 [cacheKey]: data,
+              }))
+              setPremiumRangeByPeriod((prev) => ({
+                ...prev,
+                [period]: { min: data.period.premiumMin, max: data.period.premiumMax },
               }))
             })
             .catch((e) => {
@@ -187,16 +224,22 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
 
   useEffect(() => {
     const cacheKey = getCacheKey(period, buyThreshold, sellThreshold)
-    if (autoRun && !resultsCache[cacheKey] && !isLoading) {
-      handleRun()
+    if (!autoRun || resultsCache[cacheKey] || isLoading) {
+      return
     }
+    // 렌더 직후 effect 재실행 등으로 동일 cacheKey에 대해 중복 호출 방지
+    if (runStartedForRef.current === cacheKey) {
+      return
+    }
+    runStartedForRef.current = cacheKey
+    handleRun()
   }, [period, autoRun, resultsCache, isLoading, handleRun])
 
   const fmtPct = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(2)}%`
   const fmtKrw = (v: number) => `${v.toLocaleString("ko-KR")}` + (locale === "ko" ? "원" : "")
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
       {/* Header */}
       <div className="p-6 pb-4">
         <div className="flex flex-col gap-4">
@@ -260,8 +303,9 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
                 onBlur={() => {
                   const num = parseFloat(buyInput);
                   if (!isNaN(num)) {
-                    setBuyThreshold(num);
-                    setBuyInput(num.toString());
+                    const clamped = Math.max(inputMin, Math.min(inputMax, num));
+                    setBuyThreshold(clamped);
+                    setBuyInput(clamped.toString());
                   } else {
                     setBuyInput(buyThreshold.toString());
                   }
@@ -295,8 +339,9 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
                 onBlur={() => {
                   const num = parseFloat(sellInput);
                   if (!isNaN(num)) {
-                    setSellThreshold(num);
-                    setSellInput(num.toString());
+                    const clamped = Math.max(inputMin, Math.min(inputMax, num));
+                    setSellThreshold(clamped);
+                    setSellInput(clamped.toString());
                   } else {
                     setSellInput(sellThreshold.toString());
                   }
@@ -311,9 +356,11 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
               <span className="text-gray-500 dark:text-gray-400">%</span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5" role="note" aria-label={labels.strategyThresholdHint}>
-            {labels.strategyThresholdHint}
-          </p>
+          {premiumRange && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1" role="note">
+              {labels.premiumRangeHint}: {premiumRange.min}% ~ {premiumRange.max}%
+            </p>
+          )}
           {/* Period selector + Run button */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-1">
@@ -351,11 +398,11 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
         </div>
       </div>
 
-      {/* Loading Skeleton */}
-      {isLoading && !result && (
-        <div className="animate-in fade-in duration-300">
+      {/* Loading Skeleton - 로딩 중 표시. 전환 시 높이 유지로 깜빡임 방지 */}
+      {isLoading && (
+        <div className="min-h-[32rem] md:min-h-[36rem]">
           {/* Hero Stats Skeleton */}
-          <div className="px-6 pb-4">
+          <div className="px-6 pb-4 pt-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="rounded-xl p-5 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
@@ -389,9 +436,12 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
         </div>
       )}
 
-      {/* Results */}
+      {/* Results - 짧은 페이드인으로 전환 깜빡임 감소 */}
       {result && result.equityCurve.length > 0 && !isLoading && (
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div
+          className={`transition-opacity duration-200 ${resultsRevealed ? "opacity-100" : "opacity-0"}`}
+          style={resultsRevealed ? undefined : { minHeight: "32rem" }}
+        >
           {/* Hero Stats - Strategy vs Buy & Hold */}
           <div className="px-6 pb-4 pt-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -462,9 +512,9 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
                       <Info className="w-3.5 h-3.5" />
                     </button>
                     {showExcessTooltip && (
-                      <div className="absolute left-0 top-full mt-2 w-72 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl z-10 border border-gray-700">
+                      <div className="absolute left-0 right-0 top-full mt-2 w-full min-w-0 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl z-50 border border-gray-700 whitespace-normal">
                         <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 dark:bg-gray-800 border-l border-t border-gray-700 transform rotate-45" />
-                        {labels.excessReturnTooltip}
+                        <p className="leading-relaxed">{labels.excessReturnTooltip}</p>
                       </div>
                     )}
                   </div>
@@ -528,26 +578,51 @@ export function StrategySimulation({ etfId, etfName, locale }: StrategySimulatio
                     content={({ active, payload }) => {
                       if (!active || !payload || !payload.length) return null
                       const point = payload[0].payload as EquityCurvePoint
+                      const hasPremium = typeof point.premium === "number"
+                      const hasPrice = typeof point.etfClose === "number"
                       return (
-                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 shadow-lg text-sm">
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 shadow-lg text-sm min-w-[12rem]">
                           <div className="text-gray-500 dark:text-gray-400 text-xs mb-2">{point.date}</div>
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-col gap-1.5">
+                            {hasPremium && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500 dark:text-gray-400 shrink-0">{labels.premium}:</span>
+                                <span className={`font-semibold ${point.premium! >= 0 ? "text-blue-600 dark:text-blue-400" : "text-amber-600 dark:text-amber-400"}`}>
+                                  {fmtPct(point.premium!)}
+                                </span>
+                              </div>
+                            )}
+                            {hasPrice && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500 dark:text-gray-400 shrink-0">{labels.closingPrice}:</span>
+                                <span className="font-mono text-gray-700 dark:text-gray-300">{fmtKrw(point.etfClose!)}</span>
+                              </div>
+                            )}
                             <div className="flex items-center gap-2">
-                              <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                              <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
                               <span className="text-gray-600 dark:text-gray-300">{labels.strategy}:</span>
                               <span className={`font-semibold ${point.strategy >= 0 ? "text-green-600" : "text-red-600"}`}>
                                 {fmtPct(point.strategy)}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />
+                              <div className="w-2.5 h-2.5 rounded-full bg-gray-400 shrink-0" />
                               <span className="text-gray-600 dark:text-gray-300">{labels.buyHold}:</span>
                               <span className={`font-semibold ${point.buyHold >= 0 ? "text-green-600" : "text-red-600"}`}>
                                 {fmtPct(point.buyHold)}
                               </span>
                             </div>
-                            {point.signal && (
-                              <div className={`mt-1 px-2 py-0.5 rounded text-xs font-bold inline-block w-fit ${
+                            {point.signal && hasPremium && (
+                                <div className={`mt-0.5 px-2 py-0.5 rounded text-xs font-bold inline-block w-fit ${
+                                  point.signal === "BUY"
+                                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                                    : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                                }`}>
+                                  {point.signal}
+                                </div>
+                            )}
+                            {point.signal && !hasPremium && (
+                              <div className={`mt-0.5 px-2 py-0.5 rounded text-xs font-bold inline-block w-fit ${
                                 point.signal === "BUY"
                                   ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
                                   : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
