@@ -30,6 +30,7 @@ import { fetchMarketData } from "@/app/actions";
 import { ETF_OPTIONS, INDEX_SYMBOL_NASDAQ100, INDEX_SYMBOL_SP500, INDEX_SYMBOL_SEMICONDUCTOR, type EtfOption } from "@/lib/etf-options";
 import { useLocaleState } from "@/components/i18n-provider";
 import { PremiumHistoryChart } from "@/components/premium-history-chart";
+import { SameIndexEtfComparison } from "@/components/same-index-etf-comparison";
 import { StrategySimulation } from "@/components/strategy-simulation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getAlertRequestIssueUrl, getAlertRequestMailto } from "@/lib/site-config";
@@ -67,7 +68,7 @@ export function EtfCalculator() {
   const [showSticky, setShowSticky] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isKoreanMarketOpen, setIsKoreanMarketOpen] = useState(true);
-  type ExtraTabType = "premium" | "strategy" | null;
+  type ExtraTabType = "premium" | "strategy" | "compare" | null;
   const [extraTab, setExtraTab] = useState<ExtraTabType>(null);
 
   useEffect(() => {
@@ -786,6 +787,17 @@ export function EtfCalculator() {
           >
             {t("strategySimulationTab")}
           </button>
+          <button
+            type="button"
+            onClick={() => setExtraTab(extraTab === "compare" ? null : "compare")}
+            className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              extraTab === "compare"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+            }`}
+          >
+            {t("sameIndexComparisonTab")}
+          </button>
         </div>
         {extraTab === "premium" && (
           <PremiumHistoryChart
@@ -801,6 +813,14 @@ export function EtfCalculator() {
             key={selectedEtf.id}
             etfId={selectedEtf.id}
             etfName={selectedEtf.name}
+            locale={locale}
+          />
+        )}
+        {extraTab === "compare" && (
+          <SameIndexEtfComparison
+            key={selectedEtf.indexSymbol}
+            indexSymbol={selectedEtf.indexSymbol}
+            indexName={selectedEtf.indexName}
             locale={locale}
           />
         )}
