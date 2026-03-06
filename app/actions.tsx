@@ -1,156 +1,25 @@
 "use server"
 
+import { getCachedData } from "@/lib/cache"
+import {
+  COMMON_HEADERS,
+  fetchMarketDataRaw,
+  getNaverDomesticEtf,
+  getNaverFx,
+  getNaverOverseas,
+  parsePrice,
+  type FetchResult,
+  type MarketData,
+} from "@/lib/fetchers"
 import { ETF_OPTIONS, INDEX_SYMBOLS, INDEX_CHART_FALLBACK, type EtfOption } from "@/lib/etf-options"
 
-interface MarketData {
-  symbol: string
-  price: number
-  prevClose: number
-}
+export type { FetchResult } from "@/lib/fetchers"
 
-interface EtfMarketData extends MarketData {
-  nav: number
-}
-
-interface FetchResult {
-  etf: EtfMarketData
-  index: MarketData
-  fx: MarketData
-}
-
-const COMMON_HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
-  Referer: "https://m.stock.naver.com/",
-  Accept: "application/json, text/plain, */*",
-}
-
-const UNCOMMON_HEADERS = {
-"User-Agent":
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
-  Referer: "https://polling.finance.naver.com/",
-  Accept: "application/json, text/plain, */*",
-}
-
-// Helper to clean price strings (e.g., "105,000" -> 105000)
-const parsePrice = (str: string | number): number => {
-  if (typeof str === "number") return str
-  return Number.parseFloat(str.replace(/,/g, ""))
-}
-
-async function getNaverDomesticEtf(code: string): Promise<EtfMarketData> {
-  try {
-    // Naver ETF API with NAV data
-    const url = `https://finance.naver.com/api/sise/etfItemList.nhn`
-    const res = await fetch(url, { 
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        "Referer": "https://finance.naver.com/",
-        "Accept": "application/json",
-      },
-      next: { revalidate: 10 } 
-    })
-
-    if (!res.ok) throw new Error(`Naver ETF API error: ${res.status}`)
-
-    const data = await res.json()
-    const etfList = data?.result?.etfItemList || []
-    
-    // Find ETF by code
-    const etfItem = etfList.find((item: Record<string, unknown>) => item.itemcode === code)
-    
-    if (!etfItem) throw new Error(`ETF not found: ${code}`)
-
-    const currentPrice = parsePrice(etfItem.nowVal || 0)
-    const nav = parsePrice(etfItem.nav || 0)
-    
-    // Calculate prevClose from changeRate
-    const changeRate = parsePrice(etfItem.changeRate || 0)
-    const prevClose = changeRate !== 0 ? currentPrice / (1 + changeRate / 100) : currentPrice
-
-    return {
-      symbol: code,
-      price: currentPrice,
-      prevClose: Math.round(prevClose),
-      nav: nav,
-    }
-  } catch (e) {
-    console.error(`Failed to fetch Naver ETF (${code}):`, e)
-    return { symbol: code, price: 0, prevClose: 0, nav: 0 }
-  }
-}
-
-async function getNaverOverseas(symbol: string): Promise<MarketData> {
-  try {
-    // 지수(NDX, SPX, SOX)는 worldstock/index, ETF는 worldstock/etf
-    const isIndex = INDEX_SYMBOLS.includes(symbol as (typeof INDEX_SYMBOLS)[number])
-    const path = isIndex ? "worldstock/index" : "worldstock/etf"
-    const url = `https://polling.finance.naver.com/api/realtime/${path}/${symbol}`
-    const res = await fetch(url, { headers: UNCOMMON_HEADERS, next: { revalidate: 60 } })
-
-    if (!res.ok) throw new Error(`Naver Overseas API error: ${res.status}`)
-
-    const responseData = await res.json()
-    const data = responseData.datas[0]
-
-    console.log(data)
-
-    if (!data || !data.closePrice) throw new Error("Invalid data format")
-
-    const currentPrice = parsePrice(data.closePrice)
-    const fluctuationRate = parsePrice(data.fluctuationsRatio)
-    const prevClose = currentPrice / (1 + fluctuationRate / 100)
-
-    return {
-      symbol,
-      price: currentPrice,
-      prevClose: Number.parseFloat(prevClose.toFixed(2)), // USD has decimals
-    }
-  } catch (e) {
-    console.error(`Failed to fetch Naver Overseas (${symbol}):`, e)
-    return { symbol, price: 0, prevClose: 0 }
-  }
-}
-
-async function getNaverFx(code = "FX_USDKRW"): Promise<MarketData> {
-  try {
-    // Naver Mobile FX API
-    const url = `https://m.stock.naver.com/front-api/marketIndex/productDetail?category=exchange&reutersCode=${code}`
-    const res = await fetch(url, { headers: COMMON_HEADERS, next: { revalidate: 60 } })
-
-    if (!res.ok) throw new Error(`Naver FX API error: ${res.status}`)
-
-    const data = await res.json()
-    const result = data.result
-    if (!result || !result.calcPrice) throw new Error("Invalid FX data format")
-
-    const currentPrice = parsePrice(result.calcPrice)
-    const fluctuationRate = parsePrice(result.fluctuationsRatio)
-    const prevClose = currentPrice / (1 + fluctuationRate / 100)
-
-    return {
-      symbol: "USD/KRW",
-      price: currentPrice,
-      prevClose: Number.parseFloat(prevClose.toFixed(2)),
-    }
-  } catch (e) {
-    console.error(`Failed to fetch Naver FX:`, e)
-    return { symbol: "USD/KRW", price: 0, prevClose: 0 }
-  }
-}
-
+/** 시세 조회: KV 캐시(60초) 우선, 미스 시에만 외부 API 호출 후 저장 */
 export async function fetchMarketData(etfId?: string): Promise<FetchResult> {
-  // 선택된 ETF 찾기 (기본값: TIGER 나스닥100)
-  const selectedEtf = ETF_OPTIONS.find((e) => e.id === etfId) || ETF_OPTIONS[0]
-
-  // Fetch in parallel for speed since Naver is usually faster/less strict than Yahoo
-  const [etf, index, fx] = await Promise.all([
-    getNaverDomesticEtf(selectedEtf.code),
-    getNaverOverseas(selectedEtf.indexSymbol),
-    getNaverFx("FX_USDKRW"),
-  ])
-
-  return { etf, index, fx }
+  const selectedEtf = ETF_OPTIONS.find((e) => e.id === etfId) ?? ETF_OPTIONS[0]
+  const cacheKey = `etf:market:${selectedEtf.id}`
+  return getCachedData(cacheKey, () => fetchMarketDataRaw(selectedEtf.id), 60)
 }
 
 export interface SameIndexEtfRowType {
