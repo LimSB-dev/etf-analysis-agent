@@ -1,13 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { t, localeStorageKey } from "./test-i18n";
+import { t } from "./test-i18n";
+import { localeInitPayload, getLocaleInitScript } from "./helpers/test-utils";
 
 test.describe("홈 페이지", () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(
-      (payload: { key: string; value: string }) =>
-        localStorage.setItem(payload.key, payload.value),
-      { key: localeStorageKey, value: "ko" },
-    );
+    await page.addInitScript(getLocaleInitScript(), localeInitPayload);
   });
 
   test("페이지 타이틀과 메인 영역이 노출된다", async ({ page }) => {
@@ -28,7 +25,9 @@ test.describe("홈 페이지", () => {
     const h1 = header.getByRole("heading", { level: 1 });
     await expect(h1).toHaveText(t.pageTitle);
 
-    const aboutLink = header.getByRole("link", { name: t.headerServiceDescription });
+    const aboutLink = header.getByRole("link", {
+      name: t.headerServiceDescription,
+    });
     await expect(aboutLink).toHaveAttribute("href", "/about");
   });
 
@@ -71,53 +70,6 @@ test.describe("홈 페이지", () => {
     expect(afterValue).not.toBe(initialValue);
   });
 
-  test("시세 조회 후 상세 분석 보기 버튼이 있고 클릭 시 펼쳐진다", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    const region = page.getByRole("region", { name: t.premiumAnalysis });
-    await region
-      .getByRole("button", {
-        name: new RegExp(`${t.autoFetchPrices}|${t.fetchingData}`),
-      })
-      .click();
-
-    const detailedButton = page.getByRole("button", {
-      name: t.detailedAnalysis,
-    });
-    await expect(detailedButton).toBeVisible({ timeout: 20_000 });
-    await detailedButton.click();
-    await expect(page.getByText(t.iNavCalculation)).toBeVisible({
-      timeout: 5_000,
-    });
-  });
-
-  test("시세 조회 후 추가 탭(프리미엄 추이, 전략 시뮬레이션, 같은 지수 ETF 비교)이 노출된다", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    const calculatorRegion = page.getByRole("region", { name: t.premiumAnalysis });
-    await calculatorRegion
-      .getByRole("button", {
-        name: new RegExp(`${t.autoFetchPrices}|${t.fetchingData}`),
-      })
-      .click();
-
-    const extraSection = page.getByRole("region", {
-      name: t.extraTabsRegionLabel,
-    });
-    await expect(extraSection).toBeVisible({ timeout: 20_000 });
-    await expect(
-      extraSection.getByRole("button", { name: t.premiumTrendTab }),
-    ).toBeVisible();
-    await expect(
-      extraSection.getByRole("button", { name: t.strategySimulationTab }),
-    ).toBeVisible();
-    await expect(
-      extraSection.getByRole("button", { name: t.sameIndexComparisonTab }),
-    ).toBeVisible();
-  });
-
   test("테마 변경 버튼과 언어 전환 버튼이 있다", async ({ page }) => {
     await page.goto("/");
 
@@ -143,88 +95,5 @@ test.describe("홈 페이지", () => {
     await expect(
       footer.getByRole("link", { name: t.footer.githubProfile }),
     ).toBeVisible();
-  });
-
-  test("시세 조회 후 알람 배너 제목이 노출된다", async ({ page }) => {
-    await page.goto("/");
-    const calculatorRegion = page.getByRole("region", { name: t.premiumAnalysis });
-    await calculatorRegion
-      .getByRole("button", {
-        name: new RegExp(`${t.autoFetchPrices}|${t.fetchingData}`),
-      })
-      .click();
-    await expect(
-      page.getByRole("main").getByText(t.realtimeAlertTitle),
-    ).toBeVisible({ timeout: 20_000 });
-  });
-});
-
-test.describe("About 페이지", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(
-      (payload: { key: string; value: string }) =>
-        localStorage.setItem(payload.key, payload.value),
-      { key: localeStorageKey, value: "ko" },
-    );
-  });
-
-  test("메인으로 돌아가기 링크와 h1이 있다", async ({ page }) => {
-    await page.goto("/about");
-
-    const main = page.getByRole("main");
-    await expect(main).toBeVisible();
-
-    const backLink = main.getByRole("link", { name: t.about.backToHome });
-    await expect(backLink).toBeVisible();
-    await expect(backLink).toHaveAttribute("href", "/");
-
-    const h1 = main.getByRole("heading", { level: 1 });
-    await expect(h1).toHaveText(t.about.title);
-  });
-
-  test("섹션 제목들이 노출된다", async ({ page }) => {
-    await page.goto("/about");
-
-    const article = page.getByRole("article", { name: t.about.title });
-    await expect(article).toBeVisible();
-    const h2List = article.getByRole("heading", { level: 2 });
-    await expect(h2List.first()).toBeVisible();
-    await expect(h2List).toHaveCount(4);
-  });
-
-  test("메인으로 돌아가기 클릭 시 홈으로 이동한다", async ({ page }) => {
-    await page.goto("/about");
-    await page
-      .getByRole("main")
-      .getByRole("link", { name: t.about.backToHome })
-      .click();
-    await expect(page).toHaveURL("/");
-    await expect(page.getByRole("main")).toBeVisible();
-  });
-});
-
-test.describe("네비게이션", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(
-      (payload: { key: string; value: string }) =>
-        localStorage.setItem(payload.key, payload.value),
-      { key: localeStorageKey, value: "ko" },
-    );
-  });
-
-  test("홈에서 서비스 소개 링크 클릭 시 About 페이지로 이동한다", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    await page
-      .getByRole("banner")
-      .getByRole("link", { name: t.headerServiceDescription })
-      .click();
-    await expect(page).toHaveURL("/about");
-    await expect(
-      page
-        .getByRole("article", { name: t.about.title })
-        .getByRole("heading", { level: 1 }),
-    ).toHaveText(t.about.title);
   });
 });
