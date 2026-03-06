@@ -23,6 +23,11 @@
 - **성과 비교 차트**: 전략 vs 단순 보유 자산 곡선
 - **거래 내역**: 매수일/매도일, 매수가/매도가, 수익률 표
 
+### Telegram ETF 알림 봇
+- **웹 로그인 없이**: 텔레그램 봇에서 `/start` → ETF 선택 → 괴리율 기준 선택으로 구독
+- **매수 알림**: 매일 평일 09:30(KST)에 괴리율이 설정값 이하인 ETF에 대해 텔레그램으로 알림 발송
+- **저장**: Vercel KV(Upstash)에 구독 정보 저장
+
 ### UI·환경
 - **다국어**: 한국어 / 영어 전환(헤더 버튼)
 - **다크 모드**: 라이트 / 다크 / 시스템(OS 설정 따름), 헤더에서 원형 버튼으로 전환
@@ -65,6 +70,19 @@ iNAV(실시간 추정가) = NAV(전일) × (1 + 기초지수 수익률) × (1 + 
 npm install
 npm run dev
 ```
+
+## Telegram 봇 설정 (선택)
+
+1. [@BotFather](https://t.me/BotFather)에서 봇 생성 후 `TELEGRAM_BOT_TOKEN` 발급
+2. 환경 변수 설정 (Vercel 또는 `.env.local`):
+   - `TELEGRAM_BOT_TOKEN`: 봇 토큰 (필수)
+   - `CRON_SECRET`: CRON API 보호용 시크릿 (설정 시 cron 요청에 `Authorization: Bearer <CRON_SECRET>` 필요)
+   - KV는 기존대로 `KV_REST_API_URL`, `KV_REST_API_TOKEN` 사용
+3. Vercel 배포 후 웹훅 등록:
+   ```
+   https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<YOUR_VERCEL_DOMAIN>/api/telegram/webhook
+   ```
+4. CRON은 매일 평일 00:30 UTC(09:30 KST)에 `/api/telegram/cron` 자동 호출
 
 ## 라이선스
 
