@@ -1,9 +1,10 @@
 import { localeStorageKey } from "../test-i18n";
 
-/** 프리미엄 문자열(예: "-1.25%", "+0.50%")에서 숫자만 파싱 */
+/** 프리미엄 문자열(예: "-1.25%", "+0.50%", "1,25%")에서 숫자만 파싱 */
 export function parsePremiumFromText(text: string | null): number | null {
   if (!text) return null;
-  const m = text.trim().match(/^([-+]?\d+(?:\.\d+)?)\s*%?$/);
+  const normalized = text.trim().replace(/,/g, ".");
+  const m = normalized.match(/^([-+]?\d+(?:\.\d+)?)\s*%?$/);
   return m ? Number.parseFloat(m[1]) : null;
 }
 

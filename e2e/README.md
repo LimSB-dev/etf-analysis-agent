@@ -15,10 +15,10 @@ Playwright 기반 end-to-end 테스트입니다.
 
 ## 실행
 
-- `npm run test:e2e` — 서버 기동 후 전체 e2e 실행
-- `npm run test:e2e:local` — 이미 떠 있는 로컬 서버로만 테스트
+- **`npm run test:e2e`** — 서버 자동 기동 후 전체 e2e 실행 (권장)
+- `npm run test:e2e:local` — 이미 떠 있는 로컬 서버로만 테스트 (`NO_WEB_SERVER=1`)
 
 ## 참고
 
 - 테스트는 **한국어(ko)** 로 고정되어 있습니다 (`beforeEach`에서 localStorage 설정).
-- `calculator-data.spec.ts`는 실제 API를 호출하므로 네트워크/타임아웃에 따라 실패할 수 있습니다.
+- API를 호출하는 `calculator-data.spec.ts`는 **Chromium에서만** 실행되도록 설정되어 있어, 외부 API 부하와 타임아웃을 줄이고 `npm run test:e2e` 한 번에 안정적으로 통과합니다. 나머지 스펙(home, about, navigation)은 Chromium·Firefox·WebKit 모두에서 실행됩니다.

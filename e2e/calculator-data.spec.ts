@@ -7,6 +7,8 @@ import {
 } from "./helpers/test-utils";
 
 test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () => {
+  test.setTimeout(60_000);
+
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(getLocaleInitScript(), localeInitPayload);
   });
@@ -27,7 +29,7 @@ test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () =>
     const resultSignal = page.getByText(
       new RegExp(`${t.buyAction}|${t.sellAction}|${t.holdAction}`),
     );
-    await expect(resultSignal).toBeVisible({ timeout: 25_000 });
+    await expect(resultSignal).toBeVisible({ timeout: 40_000 });
 
     const main = page.getByRole("main");
 
@@ -56,15 +58,15 @@ test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () =>
     const resultSignal = page.getByText(
       new RegExp(`${t.buyAction}|${t.sellAction}|${t.holdAction}`),
     );
-    await expect(resultSignal).toBeVisible({ timeout: 25_000 });
+    await expect(resultSignal).toBeVisible({ timeout: 40_000 });
 
-    await expect(page.getByText(t.currentPremium)).toBeVisible();
-    const premiumContainer = page
+    const premiumBox = page
       .getByText(t.currentPremium)
       .locator("..")
       .locator("..");
+    await expect(premiumBox.getByText(t.currentPremium)).toBeVisible();
     await expect(
-      premiumContainer.getByText(/[-+]?\d+\.?\d*\s*%?/),
+      premiumBox.getByText(/[-+]?\d+[.,]\d+\s*%/),
     ).toBeVisible({ timeout: 5_000 });
   });
 
@@ -84,15 +86,15 @@ test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () =>
     const resultSignal = page.getByText(
       new RegExp(`${t.buyAction}|${t.sellAction}|${t.holdAction}`),
     );
-    await expect(resultSignal).toBeVisible({ timeout: 25_000 });
+    await expect(resultSignal).toBeVisible({ timeout: 40_000 });
 
     const signalText = await resultSignal.textContent();
-    const premiumContainer = page
+    const premiumBox = page
       .getByText(t.currentPremium)
       .locator("..")
       .locator("..");
-    const premiumEl = premiumContainer.getByText(/[-+]?\d+\.?\d*\s*%?/);
-    const premiumText = await premiumEl.first().textContent();
+    const premiumEl = premiumBox.getByText(/[-+]?\d+[.,]\d+\s*%/);
+    const premiumText = await premiumEl.textContent();
     const premium = parsePremiumFromText(premiumText);
 
     expect(premium).not.toBeNull();
@@ -121,23 +123,26 @@ test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () =>
       })
       .click();
 
+    const resultSignal = page.getByText(
+      new RegExp(`${t.buyAction}|${t.sellAction}|${t.holdAction}`),
+    );
+    await expect(resultSignal).toBeVisible({ timeout: 40_000 });
+
+    await calculatorRegion
+      .getByRole("button", { name: t.detailedAnalysis })
+      .click();
+
+    const detailsSection = page.getByRole("region", {
+      name: t.premiumAnalysis,
+    });
+    await expect(detailsSection.getByText(t.iNavCalculation)).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(detailsSection.getByText(t.officialNav)).toBeVisible();
     await expect(
-      page.getByText(
-        new RegExp(`${t.buyAction}|${t.sellAction}|${t.holdAction}`),
-      ),
-    ).toBeVisible({ timeout: 25_000 });
-
-    const detailedButton = page.getByRole("button", {
-      name: t.detailedAnalysis,
-    });
-    await detailedButton.click();
-
-    await expect(page.getByText(t.iNavCalculation)).toBeVisible({
-      timeout: 5_000,
-    });
-    await expect(page.getByText(t.officialNav)).toBeVisible();
-    await expect(page.getByText(t.indexReturn)).toBeVisible();
-    await expect(page.getByText(t.fxReturn)).toBeVisible();
+      detailsSection.getByText(t.indexReturnDesc),
+    ).toBeVisible();
+    await expect(detailsSection.getByText(t.fxReturnDesc)).toBeVisible();
   });
 
   test("시세 조회 후 상세 분석 보기·추가 탭·알람 배너가 노출된다", async ({
@@ -155,7 +160,7 @@ test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () =>
 
     await expect(
       page.getByRole("button", { name: t.detailedAnalysis }),
-    ).toBeVisible({ timeout: 20_000 });
+    ).toBeVisible({ timeout: 40_000 });
     await expect(
       page.getByRole("region", { name: t.extraTabsRegionLabel }),
     ).toBeVisible({ timeout: 5_000 });
