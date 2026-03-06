@@ -8,6 +8,7 @@ import type {
   CalculationResultType,
   ExtraTabType,
 } from "@/lib/etf-calculator-types"
+import type { PremiumHistoryResult } from "@/app/actions"
 
 const DEFAULT_INPUTS: MarketInputsType = {
   etfPrev: "",
@@ -28,6 +29,8 @@ export interface EtfCalculatorStateType {
   showDetails: boolean
   extraTab: ExtraTabType
   isKoreanMarketOpen: boolean
+  /** ETF별 프리미엄 추이 캐시 (ETF 변경 시 한 번에 가져온 경우 저장, 차트에서 추가 요청 방지) */
+  premiumHistoryByEtf: Record<string, PremiumHistoryResult>
 }
 
 const initialState: EtfCalculatorStateType = {
@@ -39,6 +42,7 @@ const initialState: EtfCalculatorStateType = {
   showDetails: false,
   extraTab: null,
   isKoreanMarketOpen: true,
+  premiumHistoryByEtf: {},
 }
 
 const etfCalculatorSlice = createSlice({
@@ -78,6 +82,16 @@ const etfCalculatorSlice = createSlice({
       state.result = null
       state.isLoading = true
     },
+    setPremiumHistoryForEtf: (
+      state,
+      action: PayloadAction<{ etfId: string; data: PremiumHistoryResult | null }>,
+    ) => {
+      if (action.payload.data === null) {
+        delete state.premiumHistoryByEtf[action.payload.etfId]
+      } else {
+        state.premiumHistoryByEtf[action.payload.etfId] = action.payload.data
+      }
+    },
   },
 })
 
@@ -91,5 +105,6 @@ export const {
   setExtraTab,
   setIsKoreanMarketOpen,
   resetOnEtfChange,
+  setPremiumHistoryForEtf,
 } = etfCalculatorSlice.actions
 export default etfCalculatorSlice.reducer

@@ -22,6 +22,18 @@ export async function fetchMarketData(etfId?: string): Promise<FetchResult> {
   return getCachedData(cacheKey, () => fetchMarketDataRaw(selectedEtf.id), 60)
 }
 
+/** 시세 + 프리미엄 추이 한 번에 조회 (ETF 변경 시 POST 1회로 줄이기 위함) */
+export async function fetchMarketDataAndPremiumHistory(etfId: string): Promise<{
+  marketData: FetchResult
+  premiumHistory: PremiumHistoryResult
+}> {
+  const [marketData, premiumHistory] = await Promise.all([
+    fetchMarketData(etfId),
+    fetchPremiumHistory(etfId),
+  ])
+  return { marketData, premiumHistory }
+}
+
 export interface SameIndexEtfRowType {
   etf: EtfOption
   price: number

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { fetchPremiumHistory, type PremiumHistoryResult } from "@/app/actions"
+import { useAppSelector } from "@/store/hooks"
 import type { Locale } from "@/lib/i18n"
 import { premiumChartTranslations } from "@/lib/i18n"
 import { PremiumHistoryChartSkeleton } from "@/app/loading/PremiumHistoryChartSkeleton"
@@ -54,17 +55,29 @@ export const PremiumHistoryChart = ({
   locale,
 }: PremiumHistoryChartProps) => {
   const t = premiumChartTranslations[locale]
+  const cached = useAppSelector((s) => s.etfCalculator.premiumHistoryByEtf?.[etfId])
   const [data, setData] = useState<PremiumHistoryResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const prevPremiumRef = useRef<number | undefined>(undefined)
 
   useEffect(() => {
+    if (cached != null) {
+      const final =
+        currentPremium !== undefined && cached.data.length > 0
+          ? applyCurrentPremium(cached, currentPremium)
+          : cached
+      setData(final)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
+
     let cancelled = false
+    setIsLoading(true)
+    setError(null)
 
     async function load() {
-      setIsLoading(true)
-      setError(null)
       try {
         const result = await fetchPremiumHistory(etfId)
         if (!cancelled) {
@@ -90,8 +103,7 @@ export const PremiumHistoryChart = ({
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- etfId만 바뀔 때만 fetch
-  }, [etfId])
+  }, [etfId, cached, currentPremium, t.loadError])
 
   useEffect(() => {
     if (!data || currentPremium === undefined || data.data.length === 0) {

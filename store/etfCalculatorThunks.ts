@@ -1,7 +1,7 @@
 "use client"
 
 import { createAsyncThunk } from "@reduxjs/toolkit"
-import { fetchMarketData } from "@/app/actions"
+import { fetchMarketData, fetchMarketDataAndPremiumHistory } from "@/app/actions"
 import { ETF_OPTIONS } from "@/lib/etf-options"
 import type { MarketInputsType } from "@/lib/etf-calculator-types"
 import { calculatePremiumResult } from "@/lib/premium-calculation"
@@ -10,6 +10,7 @@ import {
   setResult,
   setIsLoading,
   setSelectedEtf,
+  setPremiumHistoryForEtf,
 } from "./etfCalculatorSlice"
 import type { AppDispatch, RootState } from "./index"
 
@@ -43,8 +44,18 @@ export const fetchEtfDataThunk = createAsyncThunk<
     }
     dispatch(setIsLoading(true))
 
+    const needPremiumHistory = getState().etfCalculator.extraTab === "premium"
+
     try {
-      const data = await fetchMarketData(etfId)
+      let data: Awaited<ReturnType<typeof fetchMarketData>>
+      if (needPremiumHistory) {
+        const { marketData, premiumHistory } = await fetchMarketDataAndPremiumHistory(etfId)
+        data = marketData
+        dispatch(setPremiumHistoryForEtf({ etfId, data: premiumHistory }))
+      } else {
+        data = await fetchMarketData(etfId)
+      }
+
       if (data.etf.price === 0 || data.etf.nav === 0) {
         alertMissing("someDataMissing")
       }
