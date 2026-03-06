@@ -18,8 +18,11 @@ import {
   type InlineKeyboardButtonType,
 } from "@/lib/telegram"
 
-/** 프리미엄 기준 옵션 (% 값) */
+/** 매수 기준 옵션 (% 이하 시 매수 알림) */
 const PREMIUM_THRESHOLDS = [-1, -1.5, -2] as const
+
+/** 매도 기준 옵션 (% 이상 시 매도 알림, 선택 사항) */
+const SELL_THRESHOLDS = [1, 1.5, 2] as const
 
 /** Telegram Update 타입 (필요한 필드만) */
 interface TelegramUpdateType {
@@ -55,7 +58,7 @@ function buildEtfKeyboard(): InlineKeyboardButtonType[][] {
   ])
 }
 
-/** 2단계: 프리미엄 기준 선택 Keyboard (ticker 포함해 세션 없이 처리) */
+/** 2단계: 매수 기준 선택 Keyboard */
 function buildThresholdKeyboard(ticker: string): InlineKeyboardButtonType[][] {
   return [
     PREMIUM_THRESHOLDS.map((p) => ({
@@ -63,6 +66,19 @@ function buildThresholdKeyboard(ticker: string): InlineKeyboardButtonType[][] {
       callback_data: `thresh:${p}:${ticker}`,
     })),
   ]
+}
+
+/** 3단계: 매도 기준 선택 Keyboard (buyThreshold 포함해 구독 갱신 시 사용) */
+function buildSellThresholdKeyboard(
+  buyThreshold: number,
+  ticker: string,
+): InlineKeyboardButtonType[][] {
+  const row1 = SELL_THRESHOLDS.map((p) => ({
+    text: `+${p}%`,
+    callback_data: `sell:${p}:${buyThreshold}:${ticker}`,
+  }))
+  const row2 = [{ text: "안 함", callback_data: `sell:none:${buyThreshold}:${ticker}` }]
+  return [row1, row2]
 }
 
 export async function POST(request: NextRequest) {
@@ -114,7 +130,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: sent.ok })
   }
 
-  // 프리미엄 기준 선택: thresh:{값}:{ticker} (세션 없이 버튼 데이터만 사용)
+  // 매수 기준 선택: thresh:{값}:{ticker}
   if (data.startsWith("thresh:")) {
     const parts = data.slice(7).split(":")
     const value = parts[0]
@@ -135,18 +151,61 @@ export async function POST(request: NextRequest) {
       etf_ticker: etf.ticker,
       premium_threshold: threshold,
     })
-
-    if (added) {
-      await sendText(
-        chatId,
-        `✅ 구독이 완료되었습니다.\n\n` +
-          `ETF: ${etf.name}\n` +
-          `괴리율 기준: ${threshold}% 이하 시 매수 알림\n\n` +
-          `매일 평일 09:30에 조건을 확인해 알림을 보냅니다.`,
-      )
-    } else {
+    if (!added) {
       await sendText(chatId, "구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.")
+      return NextResponse.json({ ok: true })
     }
+
+    const sent = await sendMessageWithKeyboard(
+      chatId,
+      "괴리율이 선택한 값 이상으로 올라가면 매도 알림을 보냅니다.\n매도 알림도 받으시겠어요?",
+      buildSellThresholdKeyboard(threshold, etf.ticker),
+    )
+    return NextResponse.json({ ok: sent.ok })
+  }
+
+  // 매도 기준 선택: sell:{+1|+1.5|+2|none}:{매수기준}:{ticker}
+  if (data.startsWith("sell:")) {
+    const parts = data.slice(5).split(":")
+    const sellValue = parts[0]
+    const buyThreshold = Number.parseFloat(parts[1])
+    const ticker = parts[2]
+    const etf = ticker ? ETFS.find((e) => e.ticker === ticker) : null
+    if (!etf || !Number.isFinite(buyThreshold)) {
+      await sendText(chatId, "오류가 발생했습니다. /start 로 다시 시작해 주세요.")
+      return NextResponse.json({ ok: true })
+    }
+
+    let sellThreshold: number | undefined
+    if (sellValue !== "none") {
+      const n = Number.parseFloat(sellValue)
+      if (Number.isFinite(n) && SELL_THRESHOLDS.includes(n as 1 | 1.5 | 2)) {
+        sellThreshold = n
+      }
+    }
+
+    const added = await addSubscription({
+      chat_id: chatId,
+      etf_ticker: etf.ticker,
+      premium_threshold: buyThreshold,
+      sell_threshold: sellThreshold,
+    })
+    if (!added) {
+      await sendText(chatId, "구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.")
+      return NextResponse.json({ ok: true })
+    }
+
+    const sellText =
+      sellThreshold != null
+        ? `매수: ${buyThreshold}% 이하 / 매도: +${sellThreshold}% 이상`
+        : `매수: ${buyThreshold}% 이하`
+    await sendText(
+      chatId,
+      `✅ 구독이 완료되었습니다.\n\n` +
+        `ETF: ${etf.name}\n` +
+        `${sellText}\n\n` +
+        `매일 평일 09:30에 조건을 확인해 알림을 보냅니다.`,
+    )
     return NextResponse.json({ ok: true })
   }
 

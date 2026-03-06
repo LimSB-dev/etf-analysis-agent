@@ -6,11 +6,12 @@
 
 import { kv } from "@/lib/cache"
 
-/** 구독 한 건 */
+/** 구독 한 건 (premium_threshold: 매수 기준 이하 시 알림, sell_threshold: 매도 기준 이상 시 알림) */
 export interface SubscriptionType {
   chat_id: number
   etf_ticker: string
   premium_threshold: number
+  sell_threshold?: number
   created_at: string
 }
 

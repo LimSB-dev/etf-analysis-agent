@@ -18,8 +18,8 @@ function formatPremium(value: number): string {
   return `${value.toFixed(2)}%`
 }
 
-/** 알림 메시지 본문 생성 */
-function buildAlertMessage(etf: EtfApiItemType): string {
+/** 매수 알림 메시지 */
+function buildBuyAlertMessage(etf: EtfApiItemType): string {
   return (
     "📊 ETF 매수 신호\n\n" +
     `${etf.name}\n\n` +
@@ -27,6 +27,18 @@ function buildAlertMessage(etf: EtfApiItemType): string {
     `적정가: ${formatPrice(etf.fairValue)}\n` +
     `괴리율: ${formatPremium(etf.premium)}\n\n` +
     "🟢 BUY SIGNAL"
+  )
+}
+
+/** 매도 알림 메시지 */
+function buildSellAlertMessage(etf: EtfApiItemType): string {
+  return (
+    "📊 ETF 매도 신호\n\n" +
+    `${etf.name}\n\n` +
+    `현재가: ${formatPrice(etf.price)}\n` +
+    `적정가: ${formatPrice(etf.fairValue)}\n` +
+    `괴리율: ${formatPremium(etf.premium)}\n\n` +
+    "🔴 SELL SIGNAL"
   )
 }
 
@@ -77,13 +89,22 @@ export async function GET(request: NextRequest) {
     if (!etf) {
       continue
     }
-    // 괴리율이 사용자 설정 기준 이하일 때만 알림 (매수 신호)
-    if (etf.premium > sub.premium_threshold) {
-      continue
+    // 매수: 괴리율이 설정 기준 이하일 때
+    if (etf.premium <= sub.premium_threshold) {
+      const result = await sendText(sub.chat_id, buildBuyAlertMessage(etf))
+      if (result.ok) {
+        sentCount += 1
+      }
     }
-    const result = await sendText(sub.chat_id, buildAlertMessage(etf))
-    if (result.ok) {
-      sentCount += 1
+    // 매도: sell_threshold가 있고 괴리율이 설정 기준 이상일 때
+    if (
+      sub.sell_threshold != null &&
+      etf.premium >= sub.sell_threshold
+    ) {
+      const result = await sendText(sub.chat_id, buildSellAlertMessage(etf))
+      if (result.ok) {
+        sentCount += 1
+      }
     }
   }
 
