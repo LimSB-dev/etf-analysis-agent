@@ -1,4 +1,4 @@
-import { EtfCalculator } from "@/components/EtfCalculator"
+import { EtfCalculator } from "@/components/etf-calculator"
 
 export default function Page() {
   return (
