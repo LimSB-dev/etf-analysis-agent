@@ -3,6 +3,7 @@
 import type React from "react";
 import { useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import {
   Calculator,
   TrendingUp,
@@ -346,10 +347,17 @@ export function EtfCalculator() {
 
       {/* Page Title - 좌측, i18n·테마 우측 / 모바일에서도 between */}
       <div className="relative flex flex-row justify-between items-start gap-3 pb-2">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl">
             {pageTitle}
           </h1>
+          <Link
+            href="/about"
+            className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            aria-label={t("headerServiceDescription")}
+          >
+            {t("headerServiceDescription")}
+          </Link>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <ThemeToggle />
