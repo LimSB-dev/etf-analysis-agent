@@ -85,10 +85,10 @@
   "sameIndexComparisonTab": "같은 지수 ETF 비교",
   "sameIndexComparisonTitle": "같은 지수 ETF 비교",
   "sameIndexComparisonEtfName": "ETF",
-  "sameIndexComparisonNav": "NAV",
   "sameIndexComparisonINav": "iNAV",
+  "sameIndexComparisonGap": "괴리",
   "sameIndexComparisonNoData": "동일 지수 추종 ETF 데이터를 불러올 수 없습니다.",
-  "sameIndexComparisonDisclaimer": "iNAV·프리미엄은 동일 지수·환율 기준으로 계산된 추정값이며, 실제 공시 NAV와 다를 수 있습니다.",
+  "sameIndexComparisonDisclaimer": "iNAV·프리미엄은 동일 지수·환율 기준으로 계산된 추정값입니다.",
   "themeLight": "라이트",
   "themeDark": "다크",
   "themeSystem": "시스템",
@@ -111,5 +111,10 @@
     "sectionTargetContent": "미국 지수 ETF를 거래하는 투자자, 프리미엄을 고려한 매매 타이밍을 찾고 싶은 분, 또는 동일 지수 ETF 중 우대 조건을 비교하고 싶은 분에게 유용합니다. 참고용 정보이며, 투자 판단은 본인 책임입니다.",
     "sectionDisclaimerTitle": "면책 조항",
     "sectionDisclaimerContent": "본 서비스의 수치와 신호는 참고용이며, 투자 권유나 예측을 목적으로 하지 않습니다. iNAV·프리미엄은 전일 NAV·지수·환율 등을 기반으로 한 추정값이며, 실제 공시 NAV·시장 상황과 다를 수 있습니다. 투자 결정은 반드시 본인의 판단과 책임 하에 이루어져야 합니다."
+  },
+  "footer": {
+    "copyright": "© {year}",
+    "canaryLabBlog": "Canary Lab 블로그",
+    "githubProfile": "GitHub"
   }
 }

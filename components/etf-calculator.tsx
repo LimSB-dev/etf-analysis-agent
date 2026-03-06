@@ -34,7 +34,7 @@ import { PremiumHistoryChart } from "@/components/premium-history-chart";
 import { SameIndexEtfComparison } from "@/components/same-index-etf-comparison";
 import { StrategySimulation } from "@/components/strategy-simulation";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { getAlertRequestIssueUrl, getAlertRequestMailto } from "@/lib/site-config";
+import { ALERT_REQUEST_ISSUE_URL, getAlertRequestMailto } from "@/lib/site-config";
 
 type CalculationResult = {
   qqqReturn: number;
@@ -65,7 +65,6 @@ export function EtfCalculator() {
 
   const [result, setResult] = useState<CalculationResult | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
-  const etfSelectorRef = useRef<HTMLDivElement>(null);
   const [showSticky, setShowSticky] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isKoreanMarketOpen, setIsKoreanMarketOpen] = useState(true);
@@ -108,9 +107,7 @@ export function EtfCalculator() {
 
   const handleEtfChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const etf = ETF_OPTIONS.find((o) => o.id === e.target.value);
-    if (etf) {
-      const savedScrollY = window.scrollY;
-      
+    if (etf) {      
       setSelectedEtf(etf);
       setInputs(defaultInputs);
       setResult(null);
@@ -155,18 +152,6 @@ export function EtfCalculator() {
       }
     }
   };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (etfSelectorRef.current) {
-        const rect = etfSelectorRef.current.getBoundingClientRect();
-        setShowSticky(rect.bottom < 0);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const handleFetchData = async () => {
     setIsLoading(true);
@@ -346,7 +331,7 @@ export function EtfCalculator() {
       </div>
 
       {/* Page Title - 좌측, i18n·테마 우측 / 모바일에서도 between */}
-      <div className="relative flex flex-row justify-between items-start gap-3 pb-2">
+      <div className="relative flex flex-row justify-between items-start gap-3 pb-2 ">
         <div className="min-w-0 flex-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl">
             {pageTitle}
@@ -387,7 +372,7 @@ export function EtfCalculator() {
                   type="button"
                   onClick={handleFetchData}
                   disabled={isLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   <RefreshCw
                     className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
@@ -398,7 +383,7 @@ export function EtfCalculator() {
             </div>
 
             {/* ETF Selector */}
-            <div className="relative" ref={etfSelectorRef}>
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t("selectEtf")}
               </label>
@@ -854,7 +839,7 @@ export function EtfCalculator() {
           </div>
           <div className="flex w-full justify-center gap-2 shrink-0 sm:w-auto sm:justify-end">
             <a
-              href={getAlertRequestIssueUrl(t("alertRequestIssueTitle"), t("alertRequestIssueBody"))}
+              href={ALERT_REQUEST_ISSUE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 transition-opacity"

@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { I18nProvider } from "@/components/i18n-provider"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Footer } from "@/components/footer"
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -42,7 +43,10 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
           <I18nProvider>
-            {children}
+            <div className="flex min-h-screen flex-col max-w-4xl justify-center mx-auto">
+              {children}
+              <Footer />
+            </div>
             <Analytics />
           </I18nProvider>
         </ThemeProvider>

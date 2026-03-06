@@ -85,10 +85,10 @@
   "sameIndexComparisonTab": "Same Index ETF Compare",
   "sameIndexComparisonTitle": "Same Index ETF Comparison",
   "sameIndexComparisonEtfName": "ETF",
-  "sameIndexComparisonNav": "NAV",
   "sameIndexComparisonINav": "iNAV",
+  "sameIndexComparisonGap": "Gap",
   "sameIndexComparisonNoData": "Could not load data for ETFs tracking this index.",
-  "sameIndexComparisonDisclaimer": "iNAV and premium are estimates using the same index and FX; they may differ from official NAV.",
+  "sameIndexComparisonDisclaimer": "iNAV and premium are estimates using the same index and FX.",
   "themeLight": "Light",
   "themeDark": "Dark",
   "themeSystem": "System",
@@ -111,5 +111,10 @@
     "sectionTargetContent": "Useful for investors trading US index ETFs, or anyone looking to time entries by premium level or compare same-index ETFs. Information is for reference only; investment decisions are your own responsibility.",
     "sectionDisclaimerTitle": "Disclaimer",
     "sectionDisclaimerContent": "Figures and signals on this service are for reference only and do not constitute investment advice or predictions. iNAV and premium are estimates based on prior NAV, index, and FX data and may differ from official NAV and market conditions. All investment decisions are your own responsibility."
+  },
+  "footer": {
+    "copyright": "© {year}",
+    "canaryLabBlog": "Canary Lab blog",
+    "githubProfile": "GitHub"
   }
 }
