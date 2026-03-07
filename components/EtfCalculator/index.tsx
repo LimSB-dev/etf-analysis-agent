@@ -24,7 +24,7 @@ import {
   INDEX_SYMBOL_SP500,
   INDEX_SYMBOL_SEMICONDUCTOR,
 } from "@/lib/etf-options";
-import { ALERT_REQUEST_ISSUE_URL } from "@/lib/site-config";
+import { ALERT_REQUEST_ISSUE_URL, TELEGRAM_CHANNEL_URL } from "@/lib/site-config";
 import { EtfCalculatorStickySelector } from "./EtfCalculatorStickySelector";
 import { EtfCalculatorPageHeader } from "./EtfCalculatorPageHeader";
 import { EtfCalculatorDetailsAccordion } from "./EtfCalculatorDetailsAccordion";
@@ -447,9 +447,11 @@ export function EtfCalculator() {
           realtimeAlertDesc={t("realtimeAlertDesc")}
           alertRequestViaIssue={t("alertRequestViaIssue")}
           alertRequestViaEmail={t("alertRequestViaEmail")}
+          alertRequestJoinTelegram={t("alertRequestJoinTelegram")}
           alertRequestEmailSubject={t("alertRequestEmailSubject")}
           alertRequestEmailBody={t("alertRequestEmailBody")}
           alertRequestIssueUrl={ALERT_REQUEST_ISSUE_URL}
+          telegramChannelUrl={TELEGRAM_CHANNEL_URL || undefined}
         />
       )}
     </div>

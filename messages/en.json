@@ -10,6 +10,7 @@
   "alertRequestEmailBody": "I would like real-time buy/sell alert feature. Desired methods: Email / Mobile app push / KakaoTalk or Telegram / Other",
   "alertRequestViaIssue": "Request via GitHub Issue",
   "alertRequestViaEmail": "Request via Email",
+  "alertRequestJoinTelegram": "Join Telegram channel",
   "gitIssue": "GitHub Issue",
   "contactEmail": "Contact",
   "premiumAnalysis": "Real-Time Analysis",
