@@ -15,6 +15,7 @@ export const translations = {
     alertRequestEmailBody: "실시간 매수/매도 알람 기능을 원합니다. 희망하는 알람 방식: 이메일 / 모바일 앱 푸시 / 카카오톡·텔레그램 / 기타",
     alertRequestViaIssue: "GitHub 이슈로 신청",
     alertRequestViaEmail: "메일로 신청",
+    alertRequestJoinTelegram: "텔레그램 채널 참여",
     gitIssue: "GitHub 이슈",
     contactEmail: "메일 보내기",
 
@@ -127,6 +128,7 @@ export const translations = {
     alertRequestEmailBody: "I would like real-time buy/sell alert feature. Desired methods: Email / Mobile app push / KakaoTalk or Telegram / Other",
     alertRequestViaIssue: "Request via GitHub Issue",
     alertRequestViaEmail: "Request via Email",
+    alertRequestJoinTelegram: "Join Telegram channel",
     gitIssue: "GitHub Issue",
     contactEmail: "Contact",
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Github, Mail } from "lucide-react"
+import { Bell, Github, Mail, MessageCircle } from "lucide-react"
 import { getAlertRequestMailto } from "@/lib/site-config"
 
 interface EtfCalculatorAlertBannerProps {
@@ -8,9 +8,11 @@ interface EtfCalculatorAlertBannerProps {
   realtimeAlertDesc: string
   alertRequestViaIssue: string
   alertRequestViaEmail: string
+  alertRequestJoinTelegram: string
   alertRequestEmailSubject: string
   alertRequestEmailBody: string
   alertRequestIssueUrl: string
+  telegramChannelUrl?: string
 }
 
 export const EtfCalculatorAlertBanner = ({
@@ -18,9 +20,11 @@ export const EtfCalculatorAlertBanner = ({
   realtimeAlertDesc,
   alertRequestViaIssue,
   alertRequestViaEmail,
+  alertRequestJoinTelegram,
   alertRequestEmailSubject,
   alertRequestEmailBody,
   alertRequestIssueUrl,
+  telegramChannelUrl,
 }: EtfCalculatorAlertBannerProps) => {
   return (
     <section className="mt-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 p-6 sm:p-8">
@@ -39,6 +43,17 @@ export const EtfCalculatorAlertBanner = ({
           </div>
         </div>
         <div className="flex w-full justify-center gap-2 shrink-0 sm:w-auto sm:justify-end">
+          {telegramChannelUrl ? (
+            <a
+              href={telegramChannelUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-[#0088cc] text-white hover:opacity-90 transition-opacity"
+              aria-label={alertRequestJoinTelegram}
+            >
+              <MessageCircle className="w-5 h-5" />
+            </a>
+          ) : null}
           <a
             href={alertRequestIssueUrl}
             target="_blank"
