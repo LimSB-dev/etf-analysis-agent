@@ -39,14 +39,18 @@ function buildBroadcastMessage(etfList: EtfApiItemType[]): string {
 }
 
 export async function GET(request: NextRequest) {
-  // Vercel Cron은 CRON_SECRET으로 보호 가능 (환경변수 설정 시에만 검사)
+  // Vercel Cron은 Authorization: Bearer ${CRON_SECRET} 헤더로 호출됨. 반드시 CRON_SECRET 설정 필요.
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    const authHeader = request.headers.get("authorization")
-    const token = authHeader?.replace(/^Bearer\s+/i, "")
-    if (token !== cronSecret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+  if (!cronSecret) {
+    return NextResponse.json(
+      { error: "CRON_SECRET not configured" },
+      { status: 503 },
+    )
+  }
+  const authHeader = request.headers.get("authorization")
+  const token = authHeader?.replace(/^Bearer\s+/i, "")
+  if (token !== cronSecret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   let etfList: EtfApiItemType[]
