@@ -2,7 +2,7 @@
 export const GITHUB_ISSUES_URL =
   process.env.NEXT_PUBLIC_GITHUB_ISSUES_URL ?? "https://github.com/LimSB-dev/v0-etf-analysis-agent/issues";
 
-/** 실시간 알람 기능 요청 이슈 페이지 (Issue #12) */
+/** 프리미엄 개인화 등 기능 요청 이슈 페이지 (Issue #12) */
 export const ALERT_REQUEST_ISSUE_URL =
   "https://github.com/LimSB-dev/v0-etf-analysis-agent/issues/12";
 
