@@ -76,7 +76,7 @@ npm run dev
 1. [@BotFather](https://t.me/BotFather)에서 봇 생성 후 `TELEGRAM_BOT_TOKEN` 발급
 2. 환경 변수 설정 (Vercel 또는 `.env.local`):
    - `TELEGRAM_BOT_TOKEN`: 봇 토큰 (필수)
-   - `CRON_SECRET`: CRON API 보호용 시크릿 (설정 시 cron 요청에 `Authorization: Bearer <CRON_SECRET>` 필요)
+   - `CRON_SECRET`: **필수**. CRON API 보호용 시크릿. 미설정 시 `/api/telegram/cron`은 503을 반환하며, 설정 시 Vercel Cron이 `Authorization: Bearer <CRON_SECRET>` 헤더로 자동 호출합니다. 이 값을 모르면 외부에서 cron 호출 불가.
    - KV는 기존대로 `KV_REST_API_URL`, `KV_REST_API_TOKEN` 사용
 3. Vercel 배포 후 웹훅 등록:
    ```
