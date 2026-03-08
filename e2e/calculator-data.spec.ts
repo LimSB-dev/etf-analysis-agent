@@ -165,7 +165,7 @@ test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () =>
       page.getByRole("region", { name: t.extraTabsRegionLabel }),
     ).toBeVisible({ timeout: 5_000 });
     await expect(
-      page.getByRole("main").getByText(t.realtimeAlertTitle),
+      page.getByRole("main").getByText(t.telegramAlertTitle),
     ).toBeVisible({ timeout: 5_000 });
   });
 });

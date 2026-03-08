@@ -439,8 +439,11 @@ export function EtfCalculator() {
 
       {inputs.etfPrev && (
         <EtfCalculatorAlertBanner
-          realtimeAlertTitle={t("realtimeAlertTitle")}
-          realtimeAlertDesc={t("realtimeAlertDesc")}
+          alertBannerSectionLabel={t("alertBannerSectionLabel")}
+          telegramAlertTitle={t("telegramAlertTitle")}
+          telegramAlertDesc={t("telegramAlertDesc")}
+          featureRequestTitle={t("featureRequestTitle")}
+          featureRequestDesc={t("featureRequestDesc")}
           alertRequestViaIssue={t("alertRequestViaIssue")}
           alertRequestViaEmail={t("alertRequestViaEmail")}
           alertRequestJoinTelegram={t("alertRequestJoinTelegram")}
