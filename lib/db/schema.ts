@@ -6,6 +6,7 @@ import {
   timestamp,
   integer,
   uniqueIndex,
+  real,
 } from "drizzle-orm/pg-core";
 
 // ---------------------------------------------------------------------------
@@ -27,6 +28,29 @@ export const users = pgTable("users", {
     .notNull()
     .defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// 사용자별 ETF 프리미엄 기준 (ETF별 매수/매도 %)
+// 기본값 미설정 시 -1%, 1% 사용
+// ---------------------------------------------------------------------------
+
+export const userEtfPreferences = pgTable(
+  "user_etf_preferences",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    etfId: varchar("etf_id", { length: 64 }).notNull(),
+    buyPremiumThreshold: real("buy_premium_threshold").notNull().default(-1),
+    sellPremiumThreshold: real("sell_premium_threshold").notNull().default(1),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("user_etf_preferences_user_etf_idx").on(table.userId, table.etfId),
+  ]
+);
 
 // ---------------------------------------------------------------------------
 // OAuth 계정 테이블 (oauth_accounts)
@@ -91,5 +115,7 @@ export const verificationTokens = pgTable("verification_tokens", {
 
 export type UserType = typeof users.$inferSelect;
 export type NewUserType = typeof users.$inferInsert;
+export type UserEtfPreferenceType = typeof userEtfPreferences.$inferSelect;
+export type NewUserEtfPreferenceType = typeof userEtfPreferences.$inferInsert;
 export type OAuthAccountType = typeof oauthAccounts.$inferSelect;
 export type NewOAuthAccountType = typeof oauthAccounts.$inferInsert;

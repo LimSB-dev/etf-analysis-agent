@@ -49,8 +49,6 @@ export function StrategySimulation({
   const isLoading = useAppSelector((s) => s.strategySimulation.isLoading)
   const buyThreshold = useAppSelector((s) => s.strategySimulation.buyThreshold)
   const sellThreshold = useAppSelector((s) => s.strategySimulation.sellThreshold)
-  const buyInput = useAppSelector((s) => s.strategySimulation.buyInput)
-  const sellInput = useAppSelector((s) => s.strategySimulation.sellInput)
   const result = useAppSelector(selectStrategyResult)
   const premiumRange = useAppSelector(selectStrategyPremiumRange)
   const inputMin = useAppSelector(selectStrategyInputMin)
@@ -161,28 +159,6 @@ export function StrategySimulation({
     }
   }, [isLoading, result, dispatch])
 
-  const handleBuyBlur = () => {
-    const num = parseFloat(buyInput)
-    if (!isNaN(num)) {
-      const clamped = Math.max(inputMin, Math.min(inputMax, num))
-      dispatch(setBuyThreshold(clamped))
-      dispatch(setBuyInput(clamped.toString()))
-    } else {
-      dispatch(setBuyInput(buyThreshold.toString()))
-    }
-  }
-
-  const handleSellBlur = () => {
-    const num = parseFloat(sellInput)
-    if (!isNaN(num)) {
-      const clamped = Math.max(inputMin, Math.min(inputMax, num))
-      dispatch(setSellThreshold(clamped))
-      dispatch(setSellInput(clamped.toString()))
-    } else {
-      dispatch(setSellInput(sellThreshold.toString()))
-    }
-  }
-
   const fmtPct = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(2)}%`
   const fmtKrw = (v: number) =>
     `${v.toLocaleString("ko-KR")}` + (locale === "ko" ? "원" : "")
@@ -211,12 +187,18 @@ export function StrategySimulation({
             periods={periods}
             period={period}
             onPeriodChange={(p) => dispatch(setPeriod(p))}
-            buyInput={buyInput}
-            onBuyInputChange={(v) => dispatch(setBuyInput(v))}
-            onBuyBlur={handleBuyBlur}
-            sellInput={sellInput}
-            onSellInputChange={(v) => dispatch(setSellInput(v))}
-            onSellBlur={handleSellBlur}
+            buyValue={buyThreshold}
+            onBuyChange={(n) => {
+              dispatch(setBuyThreshold(n))
+              dispatch(setBuyInput(n.toString()))
+            }}
+            sellValue={sellThreshold}
+            onSellChange={(n) => {
+              dispatch(setSellThreshold(n))
+              dispatch(setSellInput(n.toString()))
+            }}
+            inputMin={inputMin}
+            inputMax={inputMax}
             premiumRange={premiumRange}
             isLoading={isLoading}
             onRun={handleRun}

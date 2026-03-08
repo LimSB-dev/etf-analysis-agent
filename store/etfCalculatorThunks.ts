@@ -11,6 +11,7 @@ import {
   setIsLoading,
   setSelectedEtf,
   setPremiumHistoryForEtf,
+  DEFAULT_THRESHOLDS,
 } from "./etfCalculatorSlice"
 import type { AppDispatch, RootState } from "./index"
 
@@ -99,7 +100,12 @@ export const fetchEtfDataThunk = createAsyncThunk<
           }
 
       dispatch(setInputs(newInputs))
-      const result = calculatePremiumResult(newInputs)
+      const thresholds =
+        getState().etfCalculator.userThresholdsByEtf[etfId] ?? DEFAULT_THRESHOLDS
+      const result = calculatePremiumResult(newInputs, {
+        buyThreshold: thresholds.buy,
+        sellThreshold: thresholds.sell,
+      })
       dispatch(setResult(result))
     } catch (error) {
       console.error("Failed to fetch data", error)

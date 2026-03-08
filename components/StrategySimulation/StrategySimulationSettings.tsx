@@ -2,6 +2,7 @@
 
 import { BarChart3, Play, TrendingDown, TrendingUp } from "lucide-react"
 import type { PeriodType } from "@/store/strategySimulationSlice"
+import { ThresholdPercentInput } from "@/components/shared"
 
 interface PeriodOption {
   value: PeriodType
@@ -20,12 +21,12 @@ interface StrategySimulationSettingsProps {
   periods: PeriodOption[]
   period: PeriodType
   onPeriodChange: (p: PeriodType) => void
-  buyInput: string
-  onBuyInputChange: (val: string) => void
-  onBuyBlur: () => void
-  sellInput: string
-  onSellInputChange: (val: string) => void
-  onSellBlur: () => void
+  buyValue: number
+  onBuyChange: (n: number) => void
+  sellValue: number
+  onSellChange: (n: number) => void
+  inputMin: number
+  inputMax: number
   premiumRange: { min: number; max: number } | undefined
   isLoading: boolean
   onRun: () => void
@@ -36,12 +37,12 @@ export const StrategySimulationSettings = ({
   periods,
   period,
   onPeriodChange,
-  buyInput,
-  onBuyInputChange,
-  onBuyBlur,
-  sellInput,
-  onSellInputChange,
-  onSellBlur,
+  buyValue,
+  onBuyChange,
+  sellValue,
+  onSellChange,
+  inputMin,
+  inputMax,
   premiumRange,
   isLoading,
   onRun,
@@ -59,65 +60,31 @@ export const StrategySimulationSettings = ({
         <div className="flex items-center gap-1.5">
           <TrendingUp className="w-3 h-3 text-green-600 dark:text-green-400" />
           <span className="text-gray-500 dark:text-gray-400">{labels.buyWhen} ≤</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={buyInput}
-            onChange={(e) => {
-              let val = e.target.value
-              if (buyInput === "0" && val === "0-") {
-                val = "-"
-              }
-              if (
-                val === "" ||
-                val === "-" ||
-                val === "-." ||
-                /^-?\d*\.?\d*$/.test(val)
-              ) {
-                onBuyInputChange(val)
-              }
-            }}
-            onBlur={onBuyBlur}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.currentTarget.blur()
-              }
-            }}
-            className="w-11 px-1.5 py-0.5 text-xs text-center font-mono font-semibold border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-green-700 dark:text-green-400 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+          <ThresholdPercentInput
+            value={buyValue}
+            onChange={onBuyChange}
+            min={inputMin}
+            max={inputMax}
+            variant="buy"
+            size="compact"
+            unitLabel="%"
+            className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900"
           />
-          <span className="text-gray-500 dark:text-gray-400">%</span>
         </div>
         <span className="text-gray-300 dark:text-gray-700 hidden sm:inline">|</span>
         <div className="flex items-center gap-1.5">
           <TrendingDown className="w-3 h-3 text-red-600 dark:text-red-400" />
           <span className="text-gray-500 dark:text-gray-400">{labels.sellWhen} ≥</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={sellInput}
-            onChange={(e) => {
-              let val = e.target.value
-              if (sellInput === "0" && val === "0-") {
-                val = "-"
-              }
-              if (
-                val === "" ||
-                val === "-" ||
-                val === "-." ||
-                /^-?\d*\.?\d*$/.test(val)
-              ) {
-                onSellInputChange(val)
-              }
-            }}
-            onBlur={onSellBlur}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.currentTarget.blur()
-              }
-            }}
-            className="w-11 px-1.5 py-0.5 text-xs text-center font-mono font-semibold border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-red-700 dark:text-red-400 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+          <ThresholdPercentInput
+            value={sellValue}
+            onChange={onSellChange}
+            min={inputMin}
+            max={inputMax}
+            variant="sell"
+            size="compact"
+            unitLabel="%"
+            className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900"
           />
-          <span className="text-gray-500 dark:text-gray-400">%</span>
         </div>
       </div>
       {premiumRange && (

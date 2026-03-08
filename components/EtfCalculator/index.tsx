@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import {
   ChevronDown,
   Info,
@@ -16,8 +17,12 @@ import {
   setShowSticky,
   setShowDetails,
   setIsKoreanMarketOpen,
+  setUserThresholdsByEtf,
+  setResult,
 } from "@/store/etfCalculatorSlice";
+import { DEFAULT_THRESHOLDS } from "@/store/etfCalculatorSlice";
 import { fetchEtfDataThunk } from "@/store/etfCalculatorThunks";
+import { calculatePremiumResult } from "@/lib/premium-calculation";
 import {
   ETF_OPTIONS,
   INDEX_SYMBOL_NASDAQ100,
@@ -47,6 +52,55 @@ export function EtfCalculator() {
   const isKoreanMarketOpen = useAppSelector(
     (s) => s.etfCalculator.isKoreanMarketOpen,
   );
+  const userThresholdsByEtf = useAppSelector(
+    (s) => s.etfCalculator.userThresholdsByEtf,
+  );
+  const thresholdsForSelected =
+    selectedEtf != null
+      ? userThresholdsByEtf[selectedEtf.id] ?? DEFAULT_THRESHOLDS
+      : DEFAULT_THRESHOLDS;
+  const { data: session, status: sessionStatus } = useSession();
+
+  useEffect(() => {
+    if (sessionStatus !== "authenticated") {
+      return;
+    }
+    fetch("/api/mypage/preferences")
+      .then((res) => (res.ok ? res.json() : null))
+      .then(
+        (data: { preferences?: Record<string, { buyPremiumThreshold: number; sellPremiumThreshold: number }> } | null) => {
+          if (data?.preferences && Object.keys(data.preferences).length > 0) {
+            const byEtf: Record<string, { buy: number; sell: number }> = {};
+            for (const [etfId, p] of Object.entries(data.preferences)) {
+              byEtf[etfId] = {
+                buy: p.buyPremiumThreshold ?? -1,
+                sell: p.sellPremiumThreshold ?? 1,
+              };
+            }
+            dispatch(setUserThresholdsByEtf(byEtf));
+          }
+        },
+      )
+      .catch(() => {});
+  }, [sessionStatus, dispatch]);
+
+  useEffect(() => {
+    if (!inputs.etfCurrent || !inputs.nav) {
+      return;
+    }
+    const next = calculatePremiumResult(inputs, {
+      buyThreshold: thresholdsForSelected.buy,
+      sellThreshold: thresholdsForSelected.sell,
+    });
+    if (next) {
+      dispatch(setResult(next));
+    }
+  }, [
+    inputs,
+    thresholdsForSelected.buy,
+    thresholdsForSelected.sell,
+    dispatch,
+  ]);
 
   useEffect(() => {
     const check = () => {
