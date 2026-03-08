@@ -5,6 +5,8 @@ import { Analytics } from "@vercel/analytics/next";
 import { I18nProvider } from "@/components/I18nProvider";
 import { StoreProvider } from "@/components/StoreProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AuthProvider } from "@/components/AuthProvider";
+import { SiteHeader } from "@/components/SiteHeader";
 import { Footer } from "@/components/Footer";
 import "./globals.css";
 
@@ -51,10 +53,13 @@ export default function RootLayout({
         >
           <StoreProvider>
             <I18nProvider>
-              <div className="flex min-h-screen flex-col max-w-4xl justify-center mx-auto">
-                {children}
-                <Footer />
-              </div>
+              <AuthProvider>
+                <div className="flex min-h-screen flex-col max-w-4xl justify-center mx-auto">
+                  <SiteHeader />
+                  {children}
+                  <Footer />
+                </div>
+              </AuthProvider>
               <Analytics />
             </I18nProvider>
           </StoreProvider>

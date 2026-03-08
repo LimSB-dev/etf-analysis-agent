@@ -125,5 +125,14 @@
     "copyright": "© {year}",
     "canaryLabBlog": "Canary Lab 블로그",
     "githubProfile": "GitHub"
+  },
+  "auth": {
+    "signIn": "로그인",
+    "signOut": "로그아웃",
+    "signedIn": "로그인됨",
+    "modalTitle": "로그인",
+    "modalDescription": "계정으로 로그인하여 서비스를 이용하세요.",
+    "signInWithGoogle": "Google로 로그인",
+    "closeModal": "닫기"
   }
 }

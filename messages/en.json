@@ -125,5 +125,14 @@
     "copyright": "© {year}",
     "canaryLabBlog": "Canary Lab blog",
     "githubProfile": "GitHub"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "signedIn": "Signed in",
+    "modalTitle": "Sign in",
+    "modalDescription": "Sign in with your account to use the service.",
+    "signInWithGoogle": "Sign in with Google",
+    "closeModal": "Close"
   }
 }

@@ -26,7 +26,6 @@ import {
 } from "@/lib/etf-options";
 import { ALERT_REQUEST_ISSUE_URL, TELEGRAM_CHANNEL_URL } from "@/lib/site-config";
 import { EtfCalculatorStickySelector } from "./EtfCalculatorStickySelector";
-import { EtfCalculatorPageHeader } from "./EtfCalculatorPageHeader";
 import { EtfCalculatorDetailsAccordion } from "./EtfCalculatorDetailsAccordion";
 import { EtfCalculatorExtraTabs } from "./EtfCalculatorExtraTabs";
 import { EtfCalculatorAlertBanner } from "./EtfCalculatorAlertBanner";
@@ -119,7 +118,6 @@ export function EtfCalculator() {
   const fmtNum = (num: number) =>
     num.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-  const pageTitle = t("pageTitle");
   const optionsByGroup = [
     {
       label: t("nasdaq100Group"),
@@ -144,11 +142,6 @@ export function EtfCalculator() {
       <EtfCalculatorStickySelector
         optionsByGroup={optionsByGroup}
         onEtfChange={handleEtfChange}
-      />
-
-      <EtfCalculatorPageHeader
-        pageTitle={pageTitle}
-        headerServiceDescription={t("headerServiceDescription")}
       />
 
       <section
