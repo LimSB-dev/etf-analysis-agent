@@ -3,6 +3,14 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * E2E 테스트 설정
  * @see https://playwright.dev/docs/test-configuration
+ *
+ * 환경 변수 (선택):
+ * - PLAYWRIGHT_TEST_BASE_URL: 테스트 대상 URL (기본: http://localhost:3000)
+ * - NO_WEB_SERVER: 1 이면 웹 서버를 기동하지 않음 (이미 서버가 떠 있을 때)
+ *
+ * 로컬에서 .env.local 적용된 앱으로 e2e 실행:
+ *   터미널 1: npm run dev
+ *   터미널 2: npm run test:e2e:local  (NO_WEB_SERVER=1 로 이미 떠 있는 서버 사용)
  */
 export default defineConfig({
   testDir: "./e2e",
