@@ -86,6 +86,17 @@ npm run dev
    ```
 4. CRON은 매일 평일 00:30 UTC(09:30 KST)에 `/api/telegram/cron` 자동 호출
 
+## E2E 테스트
+
+```bash
+npm run test:e2e
+```
+
+- **환경 변수**: `playwright.config.ts` 상단 주석 참고.
+  - `PLAYWRIGHT_TEST_BASE_URL`: 대상 URL (기본 `http://localhost:3000`)
+  - `NO_WEB_SERVER=1`: 서버를 띄우지 않고 이미 떠 있는 서버 사용
+- **.env.local 적용해서 테스트**: 터미널 1에서 `npm run dev` 실행 후, 터미널 2에서 `npm run test:e2e:local` 실행.
+
 ## 라이선스
 
 MIT
