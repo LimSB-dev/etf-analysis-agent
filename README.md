@@ -78,6 +78,7 @@ npm run dev
    - `TELEGRAM_BOT_TOKEN`: 봇 토큰 (필수)
    - `CRON_SECRET`: **필수**. CRON API 보호용 시크릿. 미설정 시 `/api/telegram/cron`은 503을 반환하며, 설정 시 Vercel Cron이 `Authorization: Bearer <CRON_SECRET>` 헤더로 자동 호출합니다. 이 값을 모르면 외부에서 cron 호출 불가.
    - `NEXT_PUBLIC_TELEGRAM_CHANNEL_URL`: (선택) 텔레그램 채널 초대 링크. 설정 시 알람 배너에 "텔레그램 채널 참여" 버튼이 노출됩니다. 예: `https://t.me/your_channel` 또는 비공개 채널 초대 링크.
+   - `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`: (선택) 마이페이지 구독 설정에서 "텔레그램 알림 연결" 시 열리는 봇 링크용. 봇 사용자명만 입력 (예: `MyEtfAlertBot`. `@` 없이).
    - KV는 기존대로 `KV_REST_API_URL`, `KV_REST_API_TOKEN` 사용
 3. Vercel 배포 후 웹훅 등록:
    ```

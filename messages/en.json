@@ -160,6 +160,13 @@
     "removeSubscription": "Unsubscribe",
     "removeSubscriptionA11y": "Unsubscribe from this ETF",
     "emptyMessage": "Add ETFs you follow to set buy/sell thresholds here.",
-    "unsavedChangesConfirm": "You have unsaved changes. Leave anyway?"
+    "unsavedChangesConfirm": "You have unsaved changes. Leave anyway?",
+    "subscriptionSectionTitle": "Subscription",
+    "subscriptionSectionDesc": "Get Telegram alerts for ETFs in your interest list based on your buy/sell premium settings. Tap the button below to add the bot, then tap \"Start\" in Telegram.",
+    "telegramAlertConnect": "Connect Telegram alerts",
+    "telegramAlertConnectA11y": "Open Telegram bot to connect alerts",
+    "telegramLinkRequesting": "Connecting…",
+    "telegramLinkError": "Could not load the connection URL. Please try again later.",
+    "telegramBotNotConfigured": "Telegram bot is not configured."
   }
 }

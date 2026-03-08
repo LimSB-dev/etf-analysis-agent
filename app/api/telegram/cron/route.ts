@@ -1,14 +1,14 @@
 /**
  * CRON: 매일 평일 09:30 실행 (vercel.json cron)
- * - ETF 계산 후 채널 브로드캐스트로 메시지 전송 (구독 시스템은 사용하지 않음)
+ * - ETF 계산 후 채널 브로드캐스트로 메시지 전송
+ * - 구독 목록(Redis) 기준으로 개인별 매수/매도 조건 충족 시 해당 채팅방에 알림 전송
  * - Vercel Cron은 Authorization: Bearer ${CRON_SECRET} 헤더로 호출하므로, 동일 시크릿으로 검증 권장
  */
 
 import { NextRequest, NextResponse } from "next/server"
 import { getEtfList, type EtfApiItemType } from "@/lib/getEtfList"
-// 구독 시스템: 현재 미사용 (채널 브로드캐스트 방식)
-// import { listSubscriptions } from "@/lib/subscriptions"
-import { sendToChannel } from "@/lib/telegram"
+import { listSubscriptions } from "@/lib/subscriptions"
+import { sendToChannel, sendText } from "@/lib/telegram"
 
 /** 숫자 포맷 (천 단위 구분, 소수는 premium만) */
 function formatPrice(value: number): string {
@@ -65,14 +65,46 @@ export async function GET(request: NextRequest) {
   }
 
   const message = buildBroadcastMessage(etfList)
-  const result = await sendToChannel(message)
-
-  if (!result.ok) {
+  const channelResult = await sendToChannel(message)
+  if (!channelResult.ok) {
     return NextResponse.json(
-      { error: "Telegram send failed", detail: result.error },
+      { error: "Telegram send failed", detail: channelResult.error },
       { status: 502 },
     )
   }
 
-  return NextResponse.json({ ok: true, sent: 1 })
+  const etfByTicker = new Map(etfList.map((e) => [e.ticker, e]))
+  const subscriptions = await listSubscriptions()
+  let personalSent = 0
+  for (const sub of subscriptions) {
+    const etf = etfByTicker.get(sub.etf_ticker)
+    if (!etf) {
+      continue
+    }
+    const buyTrigger = etf.premium <= sub.premium_threshold
+    const sellTrigger =
+      sub.sell_threshold != null && etf.premium >= sub.sell_threshold
+    if (!buyTrigger && !sellTrigger) {
+      continue
+    }
+    const signal =
+      buyTrigger && sellTrigger
+        ? "🟢 매수 / 🔴 매도"
+        : buyTrigger
+          ? "🟢 매수"
+          : "🔴 매도"
+    const line =
+      `${etf.name}\n` +
+      `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}`
+    const res = await sendText(sub.chat_id, line)
+    if (res.ok) {
+      personalSent += 1
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    sent: 1,
+    personalSent,
+  })
 }

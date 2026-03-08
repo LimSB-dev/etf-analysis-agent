@@ -1,6 +1,7 @@
 /**
  * Telegram Bot Webhook (POST)
  * - /start: 알림 받을 ETF 선택 Inline Keyboard 전송
+ * - /start <token>: 마이페이지에서 발급한 토큰으로 관심 리스트 구독 동기화 후 환영 메시지
  * - ETF 선택 시: 프리미엄 기준 선택 Keyboard 전송
  * - 프리미엄 선택 시: 구독 저장 후 완료 메시지
  *
@@ -9,7 +10,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { eq, and, gt } from "drizzle-orm"
 import { ETFS } from "@/lib/constants/etfs"
+import { ETF_OPTIONS } from "@/lib/etf-options"
+import { db } from "@/lib/db"
+import { userEtfPreferences, telegramLinkTokens } from "@/lib/db/schema"
 import { addSubscription } from "@/lib/subscriptions"
 import {
   answerCallbackQuery,
@@ -101,10 +106,70 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 400 })
   }
 
-  // /start (개인 채팅 또는 채널 포스트) → ETF 선택 화면
-  const isStart =
-    update.message?.text === "/start" || update.channel_post?.text === "/start"
-  if (isStart) {
+  // /start 또는 /start <token> (개인 채팅만; 채널 포스트는 토큰 없음)
+  const startText =
+    update.message?.text?.trim() ?? update.channel_post?.text?.trim() ?? ""
+  const isStartCommand = startText === "/start" || startText.startsWith("/start ")
+  if (isStartCommand) {
+    const tokenPayload = startText.startsWith("/start ")
+      ? startText.slice(7).trim()
+      : ""
+
+    if (tokenPayload && update.message?.chat?.id != null) {
+      const linkRow = await db
+        .select({ userId: telegramLinkTokens.userId })
+        .from(telegramLinkTokens)
+        .where(
+          and(
+            eq(telegramLinkTokens.token, tokenPayload),
+            gt(telegramLinkTokens.expiresAt, new Date()),
+          ),
+        )
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+
+      if (linkRow) {
+        const prefs = await db
+          .select({
+            etfId: userEtfPreferences.etfId,
+            buyPremiumThreshold: userEtfPreferences.buyPremiumThreshold,
+            sellPremiumThreshold: userEtfPreferences.sellPremiumThreshold,
+          })
+          .from(userEtfPreferences)
+          .where(eq(userEtfPreferences.userId, linkRow.userId))
+
+        let synced = 0
+        for (const p of prefs) {
+          const ticker = ETF_OPTIONS.find((o) => o.id === p.etfId)?.code ?? null
+          if (!ticker || !ETFS.some((e) => e.ticker === ticker)) {
+            continue
+          }
+          const buy = p.buyPremiumThreshold ?? -1
+          const sell = p.sellPremiumThreshold ?? 1
+          const added = await addSubscription({
+            chat_id: chatId,
+            etf_ticker: ticker,
+            premium_threshold: buy,
+            sell_threshold: sell,
+          })
+          if (added) {
+            synced += 1
+          }
+        }
+
+        await db
+          .delete(telegramLinkTokens)
+          .where(eq(telegramLinkTokens.token, tokenPayload))
+
+        const welcomeMsg =
+          synced > 0
+            ? `✅ 연결되었습니다.\n\n관심 리스트 ${synced}개 ETF에 대해 매수·매도 기준대로 알림을 보내드립니다.\n매일 평일 09:30(KST)에 조건을 확인합니다.`
+            : "✅ 연결되었습니다.\n관심 리스트에 ETF를 추가한 뒤 마이페이지에서 매수·매도 기준을 설정하고 저장하면, 해당 설정대로 알림을 보내드립니다."
+        const sent = await sendText(chatId, welcomeMsg)
+        return NextResponse.json({ ok: sent.ok })
+      }
+    }
+
     const sent = await sendMessageWithKeyboard(
       chatId,
       "알림 받을 ETF를 선택하세요.",

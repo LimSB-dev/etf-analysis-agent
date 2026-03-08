@@ -31,6 +31,31 @@ function getBotToken(): string | null {
 }
 
 /**
+ * 봇 사용자명 반환 (t.me/xxx 링크용).
+ * NEXT_PUBLIC_TELEGRAM_BOT_USERNAME 우선, 없으면 getMe API로 조회.
+ */
+export async function getBotUsername(): Promise<string | null> {
+  const fromEnv = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME?.trim()
+  if (fromEnv) {
+    return fromEnv.replace(/^@/, "")
+  }
+  const token = getBotToken()
+  if (!token) {
+    return null
+  }
+  try {
+    const res = await fetch(`${TELEGRAM_API_BASE}/bot${token}/getMe`)
+    const data = (await res.json()) as { ok: boolean; result?: { username?: string } }
+    if (data.ok && data.result?.username) {
+      return data.result.username
+    }
+  } catch {
+    // ignore
+  }
+  return null
+}
+
+/**
  * Telegram sendMessage API 호출
  * @see https://core.telegram.org/bots/api#sendmessage
  */

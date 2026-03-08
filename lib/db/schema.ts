@@ -110,6 +110,19 @@ export const verificationTokens = pgTable("verification_tokens", {
 });
 
 // ---------------------------------------------------------------------------
+// 텔레그램 알림 연결용 일회성 토큰 (마이페이지 → 봇 /start 시 사용자 연결)
+// ---------------------------------------------------------------------------
+
+export const telegramLinkTokens = pgTable("telegram_link_tokens", {
+  token: varchar("token", { length: 64 }).primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" })
+    .notNull(),
+});
+
+// ---------------------------------------------------------------------------
 // Type export (선택)
 // ---------------------------------------------------------------------------
 
@@ -119,3 +132,5 @@ export type UserEtfPreferenceType = typeof userEtfPreferences.$inferSelect;
 export type NewUserEtfPreferenceType = typeof userEtfPreferences.$inferInsert;
 export type OAuthAccountType = typeof oauthAccounts.$inferSelect;
 export type NewOAuthAccountType = typeof oauthAccounts.$inferInsert;
+export type TelegramLinkTokenType = typeof telegramLinkTokens.$inferSelect;
+export type NewTelegramLinkTokenType = typeof telegramLinkTokens.$inferInsert;

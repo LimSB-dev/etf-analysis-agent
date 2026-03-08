@@ -75,4 +75,12 @@ export async function ensureAuthTables(): Promise<void> {
       expires timestamptz NOT NULL
     )
   `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS telegram_link_tokens (
+      token varchar(64) PRIMARY KEY,
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at timestamptz NOT NULL
+    )
+  `;
 }
