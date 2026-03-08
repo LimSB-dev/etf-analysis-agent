@@ -11,6 +11,7 @@ const EXPIRES_MINUTES = 15;
 
 export interface TelegramLinkResponseType {
   botStartUrl: string;
+  botUsername: string;
   expiresInMinutes: number;
 }
 
@@ -43,6 +44,7 @@ export async function POST(): Promise<
 
   return NextResponse.json({
     botStartUrl,
+    botUsername,
     expiresInMinutes: EXPIRES_MINUTES,
   });
 }
