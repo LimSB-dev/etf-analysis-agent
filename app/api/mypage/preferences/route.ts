@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { eq, and, notInArray } from "drizzle-orm";
 import { authOptions } from "@/auth/auth";
 import { db } from "@/lib/db";
-import { userEtfPreferences } from "@/lib/db/schema";
+import { userEtfPreferences, users } from "@/lib/db/schema";
 
 export type EtfPreferenceItemType = {
   buyPremiumThreshold: number;
@@ -12,6 +12,7 @@ export type EtfPreferenceItemType = {
 
 export interface MypagePreferencesResponseType {
   preferences: Record<string, EtfPreferenceItemType>;
+  telegramLinked?: boolean;
 }
 
 const DEFAULT_BUY = -1;
@@ -25,24 +26,35 @@ export async function GET(): Promise<
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rows = await db
-    .select({
-      etfId: userEtfPreferences.etfId,
-      buyPremiumThreshold: userEtfPreferences.buyPremiumThreshold,
-      sellPremiumThreshold: userEtfPreferences.sellPremiumThreshold,
-    })
-    .from(userEtfPreferences)
-    .where(eq(userEtfPreferences.userId, session.user.id));
+  const [prefRows, userRow] = await Promise.all([
+    db
+      .select({
+        etfId: userEtfPreferences.etfId,
+        buyPremiumThreshold: userEtfPreferences.buyPremiumThreshold,
+        sellPremiumThreshold: userEtfPreferences.sellPremiumThreshold,
+      })
+      .from(userEtfPreferences)
+      .where(eq(userEtfPreferences.userId, session.user.id)),
+    db
+      .select({ telegramId: users.telegramId })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+  ]);
 
   const preferences: Record<string, EtfPreferenceItemType> = {};
-  for (const row of rows) {
+  for (const row of prefRows) {
     preferences[row.etfId] = {
       buyPremiumThreshold: row.buyPremiumThreshold ?? DEFAULT_BUY,
       sellPremiumThreshold: row.sellPremiumThreshold ?? DEFAULT_SELL,
     };
   }
 
-  return NextResponse.json({ preferences });
+  return NextResponse.json({
+    preferences,
+    telegramLinked: Boolean(userRow?.telegramId),
+  });
 }
 
 export async function PATCH(

@@ -14,7 +14,11 @@ import { eq, and, gt } from "drizzle-orm"
 import { ETFS } from "@/lib/constants/etfs"
 import { ETF_OPTIONS } from "@/lib/etf-options"
 import { db } from "@/lib/db"
-import { userEtfPreferences, telegramLinkTokens } from "@/lib/db/schema"
+import {
+  userEtfPreferences,
+  telegramLinkTokens,
+  users,
+} from "@/lib/db/schema"
 import { addSubscription } from "@/lib/subscriptions"
 import {
   answerCallbackQuery,
@@ -160,6 +164,11 @@ export async function POST(request: NextRequest) {
         await db
           .delete(telegramLinkTokens)
           .where(eq(telegramLinkTokens.token, tokenPayload))
+
+        await db
+          .update(users)
+          .set({ telegramId: String(chatId) })
+          .where(eq(users.id, linkRow.userId))
 
         const welcomeMsg =
           synced > 0

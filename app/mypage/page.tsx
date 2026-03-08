@@ -7,11 +7,22 @@ import { useSession } from "next-auth/react";
 import { useAppDispatch } from "@/store/hooks";
 import { setUserThresholdsByEtf } from "@/store/etfCalculatorSlice";
 import { ETF_OPTIONS } from "@/lib/etf-options";
-import { Plus, X } from "lucide-react";
+import { CheckCircle, Plus, X } from "lucide-react";
 import { ThresholdPercentInput } from "@/components/shared";
 
 const DEFAULT_BUY = -1;
 const DEFAULT_SELL = 1;
+
+const TelegramSvg = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    {...props}
+  >
+    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.009-1.252-.241-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.015 3.333-1.386 4.025-1.627 4.477-1.635.099-.002.321.023.465.14.121.1.155.234.171.33.015.096.034.313.02.483z" />
+  </svg>
+);
 
 type PreferencesByEtfType = Record<
   string,
@@ -39,6 +50,7 @@ export default function MypagePage() {
   const [addFormError, setAddFormError] = useState<string | null>(null);
   const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
   const [telegramLinkError, setTelegramLinkError] = useState<string | null>(null);
+  const [telegramLinked, setTelegramLinked] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -50,25 +62,31 @@ export default function MypagePage() {
     }
     fetch("/api/mypage/preferences")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { preferences?: PreferencesByEtfType } | null) => {
-        const next: PreferencesByEtfType = {};
-        const raw = data?.preferences ?? {};
-        for (const [etfId, p] of Object.entries(raw)) {
-          if (
-            etfId &&
-            p &&
-            typeof p.buyPremiumThreshold === "number" &&
-            typeof p.sellPremiumThreshold === "number"
-          ) {
-            next[etfId] = {
-              buyPremiumThreshold: p.buyPremiumThreshold,
-              sellPremiumThreshold: p.sellPremiumThreshold,
-            };
+      .then(
+        (data: {
+          preferences?: PreferencesByEtfType;
+          telegramLinked?: boolean;
+        } | null) => {
+          const next: PreferencesByEtfType = {};
+          const raw = data?.preferences ?? {};
+          for (const [etfId, p] of Object.entries(raw)) {
+            if (
+              etfId &&
+              p &&
+              typeof p.buyPremiumThreshold === "number" &&
+              typeof p.sellPremiumThreshold === "number"
+            ) {
+              next[etfId] = {
+                buyPremiumThreshold: p.buyPremiumThreshold,
+                sellPremiumThreshold: p.sellPremiumThreshold,
+              };
+            }
           }
-        }
-        setPreferences(next);
-        setInitialPreferences(next);
-      })
+          setPreferences(next);
+          setInitialPreferences(next);
+          setTelegramLinked(Boolean(data?.telegramLinked));
+        },
+      )
       .catch(() => {})
       .finally(() => {
         setLoading(false);
@@ -223,11 +241,23 @@ export default function MypagePage() {
         }
         return res.json();
       })
-      .then((data: { botStartUrl: string }) => {
-        if (data.botStartUrl) {
-          window.open(data.botStartUrl, "_blank", "noopener,noreferrer");
-        }
-      })
+      .then(
+        (data: { botStartUrl: string; botUsername?: string }) => {
+          if (!data.botStartUrl) {
+            return;
+          }
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            typeof navigator !== "undefined" ? navigator.userAgent : "",
+          );
+          if (isMobile && data.botUsername) {
+            const token = new URL(data.botStartUrl).searchParams.get("start");
+            const telegramAppUrl = `tg://resolve?domain=${data.botUsername}${token ? `&start=${token}` : ""}`;
+            window.location.href = telegramAppUrl;
+          } else {
+            window.open(data.botStartUrl, "_blank", "noopener,noreferrer");
+          }
+        },
+      )
       .catch((err) => {
         setTelegramLinkError(
           err instanceof Error ? err.message : t("telegramLinkError"),
@@ -337,27 +367,35 @@ export default function MypagePage() {
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           {t("subscriptionSectionDesc")}
         </p>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {telegramLinked ? (
+            <p
+              className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-800 dark:border-green-800 dark:bg-green-900/30 dark:text-green-200"
+              role="status"
+            >
+              <CheckCircle className="h-5 w-5 shrink-0" aria-hidden />
+              {t("telegramLinked")}
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={handleTelegramConnect}
             disabled={telegramLinkLoading}
             aria-label={t("telegramAlertConnectA11y")}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#0088cc] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0077b5] disabled:opacity-50 dark:bg-[#229ED9] dark:hover:bg-[#1a8fc7]"
+            className={
+              telegramLinked
+                ? "inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                : "inline-flex items-center gap-2 rounded-lg bg-[#0088cc] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0077b5] disabled:opacity-50 dark:bg-[#229ED9] dark:hover:bg-[#1a8fc7]"
+            }
           >
             {telegramLinkLoading ? (
               t("telegramLinkRequesting")
             ) : (
               <>
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden
-                >
-                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.009-1.252-.241-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.015 3.333-1.386 4.025-1.627 4.477-1.635.099-.002.321.023.465.14.121.1.155.234.171.33.015.096.034.313.02.483z" />
-                </svg>
-                {t("telegramAlertConnect")}
+                <TelegramSvg className="h-5 w-5 shrink-0" aria-hidden />
+                {telegramLinked
+                  ? t("telegramAlertConnectAgain")
+                  : t("telegramAlertConnect")}
               </>
             )}
           </button>
