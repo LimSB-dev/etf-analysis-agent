@@ -9,9 +9,10 @@ export const ALERT_REQUEST_ISSUE_URL =
 /** GitHub 프로필 URL (푸터 등) */
 export const GITHUB_PROFILE_URL = "https://github.com/LimSB-dev";
 
-/** 텔레그램 채널 초대 링크 (미설정 시 알람 배너에 텔레그램 버튼 미노출) */
+/** 텔레그램 채널 초대 링크 (미설정 시 저장소 README로 연결) */
+const _REPO_URL = "https://github.com/LimSB-dev/v0-etf-analysis-agent";
 export const TELEGRAM_CHANNEL_URL =
-  process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_URL ?? "";
+  process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_URL?.trim() || _REPO_URL;
 
 /** Canary Lab (블로그) URL */
 export const CANARY_LAB_URL = "https://canary-lab.vercel.app/";

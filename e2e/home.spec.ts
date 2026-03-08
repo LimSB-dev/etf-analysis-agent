@@ -73,11 +73,14 @@ test.describe("홈 페이지", () => {
   test("테마 변경 버튼과 언어 전환 버튼이 있다", async ({ page }) => {
     await page.goto("/");
 
+    const footer = page.getByRole("contentinfo");
+    await footer.scrollIntoViewIfNeeded();
+
     await expect(
-      page.getByRole("button", { name: t.themeToggleLabel }),
+      footer.getByRole("button", { name: t.themeToggleLabel }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: t.localeSwitchToEn }),
+      footer.getByRole("button", { name: t.localeSwitchToEn }),
     ).toBeVisible();
   });
 

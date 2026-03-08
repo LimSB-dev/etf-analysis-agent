@@ -33,7 +33,7 @@ import { EtfCalculatorAlertBanner } from "./EtfCalculatorAlertBanner";
 
 export function EtfCalculator() {
   const t = useTranslations();
-  const { locale, setLocale } = useLocaleState();
+  const { locale } = useLocaleState();
   const dispatch = useAppDispatch();
   const etfSelectorRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -149,10 +149,6 @@ export function EtfCalculator() {
       <EtfCalculatorPageHeader
         pageTitle={pageTitle}
         headerServiceDescription={t("headerServiceDescription")}
-        localeSwitchAriaLabel={
-          locale === "ko" ? t("localeSwitchToEn") : t("localeSwitchToKo")
-        }
-        onLocaleToggle={() => setLocale(locale === "ko" ? "en" : "ko")}
       />
 
       <section
@@ -443,8 +439,11 @@ export function EtfCalculator() {
 
       {inputs.etfPrev && (
         <EtfCalculatorAlertBanner
-          realtimeAlertTitle={t("realtimeAlertTitle")}
-          realtimeAlertDesc={t("realtimeAlertDesc")}
+          alertBannerSectionLabel={t("alertBannerSectionLabel")}
+          telegramAlertTitle={t("telegramAlertTitle")}
+          telegramAlertDesc={t("telegramAlertDesc")}
+          featureRequestTitle={t("featureRequestTitle")}
+          featureRequestDesc={t("featureRequestDesc")}
           alertRequestViaIssue={t("alertRequestViaIssue")}
           alertRequestViaEmail={t("alertRequestViaEmail")}
           alertRequestJoinTelegram={t("alertRequestJoinTelegram")}

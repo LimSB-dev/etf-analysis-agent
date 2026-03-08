@@ -1,11 +1,14 @@
 "use client"
 
-import { Bell, Github, Mail, MessageCircle } from "lucide-react"
+import { Bell, Github, Mail, MessageCircle, FileEdit } from "lucide-react"
 import { getAlertRequestMailto } from "@/lib/site-config"
 
 interface EtfCalculatorAlertBannerProps {
-  realtimeAlertTitle: string
-  realtimeAlertDesc: string
+  alertBannerSectionLabel: string
+  telegramAlertTitle: string
+  telegramAlertDesc: string
+  featureRequestTitle: string
+  featureRequestDesc: string
   alertRequestViaIssue: string
   alertRequestViaEmail: string
   alertRequestJoinTelegram: string
@@ -15,9 +18,15 @@ interface EtfCalculatorAlertBannerProps {
   telegramChannelUrl?: string
 }
 
+const cardBaseClass =
+  "rounded-xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+
 export const EtfCalculatorAlertBanner = ({
-  realtimeAlertTitle,
-  realtimeAlertDesc,
+  alertBannerSectionLabel,
+  telegramAlertTitle,
+  telegramAlertDesc,
+  featureRequestTitle,
+  featureRequestDesc,
   alertRequestViaIssue,
   alertRequestViaEmail,
   alertRequestJoinTelegram,
@@ -27,23 +36,25 @@ export const EtfCalculatorAlertBanner = ({
   telegramChannelUrl,
 }: EtfCalculatorAlertBannerProps) => {
   return (
-    <section className="mt-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 p-6 sm:p-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+    <section className="mt-12 flex flex-col gap-4" aria-label={alertBannerSectionLabel}>
+      <article
+        className={`${cardBaseClass} bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20`}
+      >
         <div className="flex items-start gap-4 min-w-0">
           <div className="flex-shrink-0 w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
             <Bell className="w-6 h-6 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-base sm:text-lg">
-              {realtimeAlertTitle}
+              {telegramAlertTitle}
             </h3>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line">
-              {realtimeAlertDesc}
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              {telegramAlertDesc}
             </p>
           </div>
         </div>
-        <div className="flex w-full justify-center gap-2 shrink-0 sm:w-auto sm:justify-end">
-          {telegramChannelUrl ? (
+        {telegramChannelUrl ? (
+          <div className="flex shrink-0 justify-center sm:justify-end">
             <a
               href={telegramChannelUrl}
               target="_blank"
@@ -53,7 +64,27 @@ export const EtfCalculatorAlertBanner = ({
             >
               <MessageCircle className="w-5 h-5" />
             </a>
-          ) : null}
+          </div>
+        ) : null}
+      </article>
+
+      <article
+        className={`${cardBaseClass} bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-950/30 dark:to-gray-900/30`}
+      >
+        <div className="flex items-start gap-4 min-w-0">
+          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+            <FileEdit className="w-6 h-6 text-slate-600 dark:text-slate-300" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-base sm:text-lg">
+              {featureRequestTitle}
+            </h3>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              {featureRequestDesc}
+            </p>
+          </div>
+        </div>
+        <div className="flex w-full justify-center gap-2 shrink-0 sm:w-auto sm:justify-end">
           <a
             href={alertRequestIssueUrl}
             target="_blank"
@@ -71,7 +102,7 @@ export const EtfCalculatorAlertBanner = ({
             <Mail className="w-5 h-5" />
           </a>
         </div>
-      </div>
+      </article>
     </section>
   )
 }
