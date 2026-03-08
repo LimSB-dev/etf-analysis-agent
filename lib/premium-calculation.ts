@@ -1,7 +1,18 @@
 import type { MarketInputsType, CalculationResultType } from "@/lib/etf-calculator-types"
 
+export interface PremiumThresholdsType {
+  buyThreshold: number
+  sellThreshold: number
+}
+
+const DEFAULT_THRESHOLDS: PremiumThresholdsType = {
+  buyThreshold: -1,
+  sellThreshold: 1,
+}
+
 export function calculatePremiumResult(
   source: MarketInputsType,
+  thresholds: Partial<PremiumThresholdsType> = {},
 ): CalculationResultType | null {
   const etfCurrent = Number.parseFloat(source.etfCurrent)
   const nav = Number.parseFloat(source.nav)
@@ -23,10 +34,13 @@ export function calculatePremiumResult(
   const iNav = nav * (1 + qqqReturn) * (1 + fxReturn)
   const premium = ((etfCurrent - iNav) / iNav) * 100
 
+  const buyT = thresholds.buyThreshold ?? DEFAULT_THRESHOLDS.buyThreshold
+  const sellT = thresholds.sellThreshold ?? DEFAULT_THRESHOLDS.sellThreshold
+
   let signal: "BUY" | "SELL" | "HOLD" = "HOLD"
-  if (premium >= 1) {
+  if (premium >= sellT) {
     signal = "SELL"
-  } else if (premium <= -1) {
+  } else if (premium <= buyT) {
     signal = "BUY"
   }
 

@@ -134,5 +134,32 @@
     "modalDescription": "Sign in with your account to use the service.",
     "signInWithGoogle": "Sign in with Google",
     "closeModal": "Close"
+  },
+  "mypage": {
+    "title": "My page",
+    "description": "Add ETFs you follow, then set buy/sell signal thresholds (%) per ETF.",
+    "interestEtfList": "Watchlist",
+    "tableCaption": "Buy/sell thresholds per ETF",
+    "etfColumn": "ETF",
+    "buyThresholdLabel": "Buy signal",
+    "buyThresholdHint": "Show buy signal when premium is at or below this value (e.g. -1.5)",
+    "sellThresholdLabel": "Sell signal",
+    "sellThresholdHint": "Show sell signal when premium is at or above this value (e.g. 1.5)",
+    "unitPercent": "%",
+    "save": "Save",
+    "saved": "Saved.",
+    "saveFailed": "Failed to save.",
+    "validationBuy": "Buy threshold must be ≤ 0.",
+    "validationSell": "Sell threshold must be ≥ 0.",
+    "loginRequired": "Please sign in.",
+    "backToHome": "Back to home",
+    "addEtf": "Add ETF",
+    "addEtfPlaceholder": "Select ETF",
+    "addConfirm": "Add",
+    "selectEtfFirst": "Please select an ETF.",
+    "removeSubscription": "Unsubscribe",
+    "removeSubscriptionA11y": "Unsubscribe from this ETF",
+    "emptyMessage": "Add ETFs you follow to set buy/sell thresholds here.",
+    "unsavedChangesConfirm": "You have unsaved changes. Leave anyway?"
   }
 }

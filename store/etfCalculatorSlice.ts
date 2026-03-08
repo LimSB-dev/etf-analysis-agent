@@ -10,6 +10,13 @@ import type {
 } from "@/lib/etf-calculator-types"
 import type { PremiumHistoryResult } from "@/app/actions"
 
+export interface UserThresholdsType {
+  buy: number
+  sell: number
+}
+
+export const DEFAULT_THRESHOLDS: UserThresholdsType = { buy: -1, sell: 1 }
+
 const DEFAULT_INPUTS: MarketInputsType = {
   etfPrev: "",
   qqqPrev: "",
@@ -29,8 +36,10 @@ export interface EtfCalculatorStateType {
   showDetails: boolean
   extraTab: ExtraTabType
   isKoreanMarketOpen: boolean
-  /** ETF별 프리미엄 추이 캐시 (ETF 변경 시 한 번에 가져온 경우 저장, 차트에서 추가 요청 방지) */
+  /** ETF별 프리미엄 추이 캐시 */
   premiumHistoryByEtf: Record<string, PremiumHistoryResult>
+  /** ETF별 매수/매도 신호 기준 % (미설정 시 -1, 1) */
+  userThresholdsByEtf: Record<string, UserThresholdsType>
 }
 
 const initialState: EtfCalculatorStateType = {
@@ -43,6 +52,7 @@ const initialState: EtfCalculatorStateType = {
   extraTab: null,
   isKoreanMarketOpen: true,
   premiumHistoryByEtf: {},
+  userThresholdsByEtf: {},
 }
 
 const etfCalculatorSlice = createSlice({
@@ -92,6 +102,12 @@ const etfCalculatorSlice = createSlice({
         state.premiumHistoryByEtf[action.payload.etfId] = action.payload.data
       }
     },
+    setUserThresholdsByEtf: (
+      state,
+      action: PayloadAction<Record<string, UserThresholdsType>>,
+    ) => {
+      state.userThresholdsByEtf = action.payload
+    },
   },
 })
 
@@ -106,5 +122,6 @@ export const {
   setIsKoreanMarketOpen,
   resetOnEtfChange,
   setPremiumHistoryForEtf,
+  setUserThresholdsByEtf,
 } = etfCalculatorSlice.actions
 export default etfCalculatorSlice.reducer
