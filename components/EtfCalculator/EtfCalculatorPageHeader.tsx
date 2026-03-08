@@ -1,21 +1,15 @@
 "use client"
 
 import Link from "next/link"
-import { Globe } from "lucide-react"
-import { ThemeToggle } from "@/components/ThemeToggle"
 
 interface EtfCalculatorPageHeaderProps {
   pageTitle: string
   headerServiceDescription: string
-  localeSwitchAriaLabel: string
-  onLocaleToggle: () => void
 }
 
 export const EtfCalculatorPageHeader = ({
   pageTitle,
   headerServiceDescription,
-  localeSwitchAriaLabel,
-  onLocaleToggle,
 }: EtfCalculatorPageHeaderProps) => {
   return (
     <header
@@ -34,18 +28,6 @@ export const EtfCalculatorPageHeader = ({
         >
           {headerServiceDescription}
         </Link>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <ThemeToggle />
-        <button
-          type="button"
-          onClick={onLocaleToggle}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300 transition-colors shrink-0"
-          aria-label={localeSwitchAriaLabel}
-        >
-          <Globe className="w-2.5 h-2.5 opacity-80" />
-          <span className="sr-only">{localeSwitchAriaLabel}</span>
-        </button>
       </div>
     </header>
   )

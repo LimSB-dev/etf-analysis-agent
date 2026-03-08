@@ -33,7 +33,7 @@ import { EtfCalculatorAlertBanner } from "./EtfCalculatorAlertBanner";
 
 export function EtfCalculator() {
   const t = useTranslations();
-  const { locale, setLocale } = useLocaleState();
+  const { locale } = useLocaleState();
   const dispatch = useAppDispatch();
   const etfSelectorRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -149,10 +149,6 @@ export function EtfCalculator() {
       <EtfCalculatorPageHeader
         pageTitle={pageTitle}
         headerServiceDescription={t("headerServiceDescription")}
-        localeSwitchAriaLabel={
-          locale === "ko" ? t("localeSwitchToEn") : t("localeSwitchToKo")
-        }
-        onLocaleToggle={() => setLocale(locale === "ko" ? "en" : "ko")}
       />
 
       <section
