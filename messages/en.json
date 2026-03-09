@@ -169,6 +169,10 @@
     "telegramStepsA11y": "Telegram alert connection steps",
     "telegramStep1": "1️⃣ Tap START in Telegram.",
     "telegramStep2": "2️⃣ Alert connection complete. (Refresh the page to see connected status.)",
+    "telegramLinked": "Telegram alerts connected",
+    "telegramUnlink": "Turn off alerts",
+    "telegramUnlinkA11y": "Disconnect Telegram alerts",
+    "telegramUnlinkFailed": "Failed to turn off alerts. Please try again later.",
     "telegramLinkRequesting": "Connecting…",
     "telegramLinkError": "Could not load the connection URL. Please try again later.",
     "telegramBotNotConfigured": "Telegram bot is not configured."

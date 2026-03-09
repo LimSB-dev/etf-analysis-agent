@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { randomBytes } from "crypto";
+import { eq } from "drizzle-orm";
 import { authOptions } from "@/auth/auth";
 import { db } from "@/lib/db";
 import { telegramLinkTokens } from "@/lib/db/schema";
@@ -33,6 +34,10 @@ export async function POST(): Promise<
 
   const token = randomBytes(TOKEN_BYTES).toString("hex");
   const expiresAt = new Date(Date.now() + EXPIRES_MINUTES * 60 * 1000);
+
+  await db
+    .delete(telegramLinkTokens)
+    .where(eq(telegramLinkTokens.userId, session.user.id));
 
   await db.insert(telegramLinkTokens).values({
     token,

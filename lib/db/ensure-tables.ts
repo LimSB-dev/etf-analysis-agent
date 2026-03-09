@@ -38,6 +38,14 @@ export async function ensureAuthTables(): Promise<void> {
   `;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS user_preferences (
+      user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      preferences jsonb NOT NULL DEFAULT '{}',
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS oauth_accounts (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,

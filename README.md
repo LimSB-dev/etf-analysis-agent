@@ -86,6 +86,17 @@ npm run dev
    ```
 4. CRON은 매일 평일 00:30 UTC(09:30 KST)에 `/api/telegram/cron` 자동 호출
 
+## DB 마이그레이션
+
+`user_etf_preferences`(ETF당 1 row) → `user_preferences`(한 유저 1 row, JSONB)로 테이블 구조를 바꾼 경우, 기존 데이터 이전을 위해 한 번 실행:
+
+```bash
+npm run db:migrate
+```
+
+- `DATABASE_URL` 필요 (`.env.local`에 있으면 스크립트가 자동 로드).
+- `user_preferences` 테이블이 없으면 생성 후, `user_etf_preferences` 데이터를 집계해 복사. 이미 있는 유저는 `ON CONFLICT DO NOTHING`으로 건너뜀.
+
 ## E2E 테스트
 
 ```bash

@@ -39,6 +39,8 @@ export default function MypagePage() {
   const [addFormError, setAddFormError] = useState<string | null>(null);
   const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
   const [telegramLinkError, setTelegramLinkError] = useState<string | null>(null);
+  const [telegramLinked, setTelegramLinked] = useState(false);
+  const [telegramUnlinkLoading, setTelegramUnlinkLoading] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -50,25 +52,31 @@ export default function MypagePage() {
     }
     fetch("/api/mypage/preferences")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { preferences?: PreferencesByEtfType } | null) => {
-        const next: PreferencesByEtfType = {};
-        const raw = data?.preferences ?? {};
-        for (const [etfId, p] of Object.entries(raw)) {
-          if (
-            etfId &&
-            p &&
-            typeof p.buyPremiumThreshold === "number" &&
-            typeof p.sellPremiumThreshold === "number"
-          ) {
-            next[etfId] = {
-              buyPremiumThreshold: p.buyPremiumThreshold,
-              sellPremiumThreshold: p.sellPremiumThreshold,
-            };
+      .then(
+        (data: {
+          preferences?: PreferencesByEtfType;
+          telegramLinked?: boolean;
+        } | null) => {
+          const next: PreferencesByEtfType = {};
+          const raw = data?.preferences ?? {};
+          for (const [etfId, p] of Object.entries(raw)) {
+            if (
+              etfId &&
+              p &&
+              typeof p.buyPremiumThreshold === "number" &&
+              typeof p.sellPremiumThreshold === "number"
+            ) {
+              next[etfId] = {
+                buyPremiumThreshold: p.buyPremiumThreshold,
+                sellPremiumThreshold: p.sellPremiumThreshold,
+              };
+            }
           }
-        }
-        setPreferences(next);
-        setInitialPreferences(next);
-      })
+          setPreferences(next);
+          setInitialPreferences(next);
+          setTelegramLinked(Boolean(data?.telegramLinked));
+        },
+      )
       .catch(() => {})
       .finally(() => {
         setLoading(false);
@@ -250,6 +258,27 @@ export default function MypagePage() {
       });
   }, [t]);
 
+  const handleTelegramUnlink = useCallback(() => {
+    setTelegramLinkError(null);
+    setTelegramUnlinkLoading(true);
+    fetch("/api/mypage/telegram-unlink", { method: "POST" })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error();
+        }
+        return res.json();
+      })
+      .then(() => {
+        setTelegramLinked(false);
+      })
+      .catch(() => {
+        setTelegramLinkError(t("telegramUnlinkFailed"));
+      })
+      .finally(() => {
+        setTelegramUnlinkLoading(false);
+      });
+  }, [t]);
+
   const removeEtf = useCallback((etfId: string) => {
     setPreferences((prev) => {
       const next = { ...prev };
@@ -349,7 +378,16 @@ export default function MypagePage() {
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           {t("subscriptionSectionDesc")}
         </p>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {telegramLinked ? (
+            <p
+              className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-800 dark:border-green-800 dark:bg-green-900/30 dark:text-green-200"
+              role="status"
+            >
+              <span aria-hidden>✓</span>
+              {t("telegramLinked")}
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={handleTelegramConnect}
@@ -373,6 +411,17 @@ export default function MypagePage() {
               </>
             )}
           </button>
+          {telegramLinked && (
+            <button
+              type="button"
+              onClick={handleTelegramUnlink}
+              disabled={telegramUnlinkLoading}
+              aria-label={t("telegramUnlinkA11y")}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+            >
+              {telegramUnlinkLoading ? "..." : t("telegramUnlink")}
+            </button>
+          )}
         </div>
         <ol className="mt-4 list-none space-y-1.5 text-sm text-gray-600 dark:text-gray-300" aria-label={t("telegramStepsA11y")}>
           <li>{t("telegramStep1")}</li>

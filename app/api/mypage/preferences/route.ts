@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { eq, and, notInArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { authOptions } from "@/auth/auth";
 import { db } from "@/lib/db";
-import { userEtfPreferences } from "@/lib/db/schema";
+import { userPreferences, users } from "@/lib/db/schema";
 
 export type EtfPreferenceItemType = {
   buyPremiumThreshold: number;
@@ -12,6 +12,7 @@ export type EtfPreferenceItemType = {
 
 export interface MypagePreferencesResponseType {
   preferences: Record<string, EtfPreferenceItemType>;
+  telegramLinked?: boolean;
 }
 
 const DEFAULT_BUY = -1;
@@ -25,24 +26,41 @@ export async function GET(): Promise<
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rows = await db
-    .select({
-      etfId: userEtfPreferences.etfId,
-      buyPremiumThreshold: userEtfPreferences.buyPremiumThreshold,
-      sellPremiumThreshold: userEtfPreferences.sellPremiumThreshold,
-    })
-    .from(userEtfPreferences)
-    .where(eq(userEtfPreferences.userId, session.user.id));
+  const [prefRow, userRow] = await Promise.all([
+    db
+      .select({ preferences: userPreferences.preferences })
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, session.user.id))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    db
+      .select({ telegramId: users.telegramId })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+  ]);
 
+  const raw = prefRow?.preferences ?? {};
   const preferences: Record<string, EtfPreferenceItemType> = {};
-  for (const row of rows) {
-    preferences[row.etfId] = {
-      buyPremiumThreshold: row.buyPremiumThreshold ?? DEFAULT_BUY,
-      sellPremiumThreshold: row.sellPremiumThreshold ?? DEFAULT_SELL,
-    };
+  for (const [etfId, p] of Object.entries(raw)) {
+    if (
+      etfId &&
+      p &&
+      typeof p.buyPremiumThreshold === "number" &&
+      typeof p.sellPremiumThreshold === "number"
+    ) {
+      preferences[etfId] = {
+        buyPremiumThreshold: p.buyPremiumThreshold,
+        sellPremiumThreshold: p.sellPremiumThreshold,
+      };
+    }
   }
 
-  return NextResponse.json({ preferences });
+  return NextResponse.json({
+    preferences,
+    telegramLinked: Boolean(userRow?.telegramId),
+  });
 }
 
 export async function PATCH(
@@ -66,44 +84,30 @@ export async function PATCH(
   }
 
   const userId = session.user.id;
-  const keptEtfIds = Object.keys(prefs).filter((id) => id && typeof prefs[id] === "object");
-
+  const nextPrefs: Record<string, { buyPremiumThreshold: number; sellPremiumThreshold: number }> = {};
   for (const [etfId, value] of Object.entries(prefs)) {
     if (!etfId || typeof value !== "object") {
       continue;
     }
     const buy = typeof value.buyPremiumThreshold === "number" ? value.buyPremiumThreshold : DEFAULT_BUY;
     const sell = typeof value.sellPremiumThreshold === "number" ? value.sellPremiumThreshold : DEFAULT_SELL;
-    await db
-      .insert(userEtfPreferences)
-      .values({
-        userId,
-        etfId,
-        buyPremiumThreshold: buy,
-        sellPremiumThreshold: sell,
-      })
-      .onConflictDoUpdate({
-        target: [userEtfPreferences.userId, userEtfPreferences.etfId],
-        set: {
-          buyPremiumThreshold: buy,
-          sellPremiumThreshold: sell,
-          updatedAt: new Date(),
-        },
-      });
+    nextPrefs[etfId] = { buyPremiumThreshold: buy, sellPremiumThreshold: sell };
   }
 
-  if (keptEtfIds.length > 0) {
-    await db
-      .delete(userEtfPreferences)
-      .where(
-        and(
-          eq(userEtfPreferences.userId, userId),
-          notInArray(userEtfPreferences.etfId, keptEtfIds),
-        ),
-      );
-  } else {
-    await db.delete(userEtfPreferences).where(eq(userEtfPreferences.userId, userId));
-  }
+  await db
+    .insert(userPreferences)
+    .values({
+      userId,
+      preferences: nextPrefs,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: userPreferences.userId,
+      set: {
+        preferences: nextPrefs,
+        updatedAt: new Date(),
+      },
+    });
 
   return GET();
 }
