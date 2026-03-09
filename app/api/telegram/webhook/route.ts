@@ -14,7 +14,7 @@ import { eq, and, gt } from "drizzle-orm"
 import { ETFS } from "@/lib/constants/etfs"
 import { ETF_OPTIONS } from "@/lib/etf-options"
 import { db } from "@/lib/db"
-import { userEtfPreferences, telegramLinkTokens } from "@/lib/db/schema"
+import { userPreferences, telegramLinkTokens } from "@/lib/db/schema"
 import { addSubscription } from "@/lib/subscriptions"
 import {
   answerCallbackQuery,
@@ -129,19 +129,18 @@ export async function POST(request: NextRequest) {
         .then((rows) => rows[0] ?? null)
 
       if (linkRow) {
-        const prefs = await db
-          .select({
-            etfId: userEtfPreferences.etfId,
-            buyPremiumThreshold: userEtfPreferences.buyPremiumThreshold,
-            sellPremiumThreshold: userEtfPreferences.sellPremiumThreshold,
-          })
-          .from(userEtfPreferences)
-          .where(eq(userEtfPreferences.userId, linkRow.userId))
+        const prefRow = await db
+          .select({ preferences: userPreferences.preferences })
+          .from(userPreferences)
+          .where(eq(userPreferences.userId, linkRow.userId))
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
 
+        const prefs = prefRow?.preferences ?? {}
         let synced = 0
-        for (const p of prefs) {
-          const ticker = ETF_OPTIONS.find((o) => o.id === p.etfId)?.code ?? null
-          if (!ticker || !ETFS.some((e) => e.ticker === ticker)) {
+        for (const [etfId, p] of Object.entries(prefs)) {
+          const ticker = ETF_OPTIONS.find((o) => o.id === etfId)?.code ?? null
+          if (!ticker || !ETFS.some((e) => e.ticker === ticker) || !p) {
             continue
           }
           const buy = p.buyPremiumThreshold ?? -1

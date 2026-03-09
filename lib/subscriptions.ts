@@ -131,3 +131,25 @@ export async function clearTelegramState(chatId: number): Promise<void> {
     // 무시
   }
 }
+
+/**
+ * 특정 chat_id의 모든 구독 제거 (알림 해제 시 사용)
+ */
+export async function removeSubscriptionsByChatId(
+  chatId: number,
+): Promise<boolean> {
+  if (!kv) {
+    return false
+  }
+  try {
+    const list = await listSubscriptions()
+    const filtered = list.filter((s) => s.chat_id !== chatId)
+    if (filtered.length === list.length) {
+      return true
+    }
+    await kv.set(SUBSCRIPTIONS_KEY, JSON.stringify(filtered))
+    return true
+  } catch {
+    return false
+  }
+}

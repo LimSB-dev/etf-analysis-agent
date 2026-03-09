@@ -7,6 +7,7 @@ import {
   integer,
   uniqueIndex,
   real,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 // ---------------------------------------------------------------------------
@@ -30,10 +31,30 @@ export const users = pgTable("users", {
 });
 
 // ---------------------------------------------------------------------------
-// 사용자별 ETF 프리미엄 기준 (ETF별 매수/매도 %)
-// 기본값 미설정 시 -1%, 1% 사용
+// 사용자별 ETF 프리미엄 기준 (한 유저 1 row, JSONB)
+// - 읽기/쓰기 모두 user_id 기준 전체 조회·전체 갱신만 하므로 row 수·쿼리 수·메모리 유리
+// - preferences: { [etfId]: { buyPremiumThreshold, sellPremiumThreshold } }
 // ---------------------------------------------------------------------------
 
+export type UserPreferencesJsonType = Record<
+  string,
+  { buyPremiumThreshold: number; sellPremiumThreshold: number }
+>;
+
+export const userPreferences = pgTable("user_preferences", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  preferences: jsonb("preferences")
+    .$type<UserPreferencesJsonType>()
+    .notNull()
+    .default({}),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
+});
+
+/** @deprecated ETF당 1 row 구조. user_preferences(한 유저 1 row)로 이전됨. 마이그레이션 후 제거 예정 */
 export const userEtfPreferences = pgTable(
   "user_etf_preferences",
   {
@@ -128,6 +149,8 @@ export const telegramLinkTokens = pgTable("telegram_link_tokens", {
 
 export type UserType = typeof users.$inferSelect;
 export type NewUserType = typeof users.$inferInsert;
+export type UserPreferencesType = typeof userPreferences.$inferSelect;
+export type NewUserPreferencesType = typeof userPreferences.$inferInsert;
 export type UserEtfPreferenceType = typeof userEtfPreferences.$inferSelect;
 export type NewUserEtfPreferenceType = typeof userEtfPreferences.$inferInsert;
 export type OAuthAccountType = typeof oauthAccounts.$inferSelect;
