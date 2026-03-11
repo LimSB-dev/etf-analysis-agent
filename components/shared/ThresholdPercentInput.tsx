@@ -94,14 +94,14 @@ export const ThresholdPercentInput = ({
       : "w-20 px-2 py-1.5 text-sm";
   const variantClasses =
     variant === "buy"
-      ? "text-green-700 dark:text-green-400 focus:ring-green-500 focus:border-green-500"
-      : "text-red-700 dark:text-red-400 focus:ring-red-500 focus:border-red-500";
+      ? "border-green-200 bg-green-50/70 text-green-800 dark:border-green-700/50 dark:bg-green-900/25 dark:text-green-300 focus:ring-green-500 focus:border-green-500"
+      : "border-red-200 bg-red-50/70 text-red-800 dark:border-red-700/50 dark:bg-red-900/25 dark:text-red-300 focus:ring-red-500 focus:border-red-500";
 
   return (
     <div className="flex items-center gap-2">
       <input
         type="text"
-        inputMode="decimal"
+        inputMode={variant === "buy" ? "text" : "decimal"}
         id={id}
         value={displayStr}
         onChange={handleChange}
@@ -113,10 +113,13 @@ export const ThresholdPercentInput = ({
         onKeyDown={handleKeyDown}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedby}
-        className={`rounded border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:border-transparent ${sizeClasses} ${variantClasses} ${className}`.trim()}
+        className={`rounded border focus:outline-none focus:ring-1 focus:border-transparent ${sizeClasses} ${variantClasses} ${className}`.trim()}
       />
       {unitLabel ? (
-        <span className="shrink-0 text-sm text-gray-500 dark:text-gray-400" aria-hidden>
+        <span
+          className={`shrink-0 text-sm ${variant === "buy" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+          aria-hidden
+        >
           {unitLabel}
         </span>
       ) : null}
