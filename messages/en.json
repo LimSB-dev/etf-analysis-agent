@@ -137,6 +137,7 @@
   },
   "mypage": {
     "title": "My page",
+    "loading": "Loading",
     "description": "Add ETFs you follow, then set buy/sell signal thresholds (%) per ETF.",
     "interestEtfList": "Watchlist",
     "tableCaption": "Buy/sell thresholds per ETF",

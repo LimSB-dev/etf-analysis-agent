@@ -6,4 +6,5 @@ export { InterestEtfListEdit } from "./InterestEtfListEdit";
 export type { InterestEtfListEditPropsType } from "./InterestEtfListEdit";
 export { MypageFormActions } from "./MypageFormActions";
 export type { MypageFormActionsPropsType } from "./MypageFormActions";
+export { MypageSkeleton } from "./MypageSkeleton";
 export type { InterestEtfEntryType } from "./types";

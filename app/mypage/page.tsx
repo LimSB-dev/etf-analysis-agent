@@ -11,6 +11,7 @@ import { InterestEtfListHeader } from "@/components/mypage/InterestEtfListHeader
 import { InterestEtfListView } from "@/components/mypage/InterestEtfListView";
 import { InterestEtfListEdit } from "@/components/mypage/InterestEtfListEdit";
 import { MypageFormActions } from "@/components/mypage/MypageFormActions";
+import { MypageSkeleton } from "@/components/mypage/MypageSkeleton";
 
 const DEFAULT_BUY = -1;
 const DEFAULT_SELL = 1;
@@ -379,11 +380,7 @@ export default function MypagePage() {
   }));
 
   if (status === "loading" || loading) {
-    return (
-      <main className="flex min-h-[40vh] flex-col items-center justify-center px-4 py-12">
-        <div className="h-8 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-      </main>
-    );
+    return <MypageSkeleton />;
   }
 
   if (status !== "authenticated") {
