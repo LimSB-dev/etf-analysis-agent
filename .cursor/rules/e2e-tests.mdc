@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+---
+
+# E2E 테스트 (Playwright)
+
+새 화면·기능을 추가하거나 수정할 때 **해당 플로우에 대한 E2E 테스트**를 함께 작성·보완한다.
+
+## 구조
+
+- **테스트 디렉터리**: `e2e/`
+- **스펙 파일**: 기능·페이지별로 분리 (예: `mypage.spec.ts`, `about.spec.ts`, `navigation.spec.ts`)
+- **공용**: `e2e/helpers/test-utils.ts` (로케일 초기화 등), `e2e/test-i18n.ts` (번역 키), 필요 시 `e2e/helpers/*-mock.ts` (API 모킹)
+
+## 작성 원칙
+
+- **번역 키 사용**: UI 텍스트 검증 시 문자열을 하드코딩하지 말고 `t`(test-i18n)를 사용한다.  
+  예: `getByRole("button", { name: t.mypage.edit })`, `getByText(t.mypage.emptyMessage)`
+- **로케일 초기화**: `beforeEach`에서 `page.addInitScript(getLocaleInitScript(), localeInitPayload)`로 한국어(ko)를 설정한다.
+- **역할·접근성 기준 선택자**: `getByRole`, `getByLabel`, `getByRole("button", { name: ... })` 등을 우선 사용하고, `getByText`는 보조로만 사용한다.
+- **대기 조건**: 페이지 전환·API 로딩 후 본문이 나온 뒤 검증하려면, 먼저 의미 있는 요소(예: heading, main)가 보일 때까지 기다린 다음 나머지 assertion을 수행한다.
+
+## 인증이 필요한 페이지
+
+- **비인증 플로우**: 리다이렉트·로그인 유도 등은 실제 세션 없이 테스트한다.
+- **인증된 플로우**: `e2e/helpers/mypage-mock.ts`처럼 **API 라우트를 모킹**한다.  
+  - 세션: `GET /api/auth/session` → 더미 세션 반환  
+  - 기타 API: 해당 경로의 GET/POST/PATCH를 `page.route()`로 가로채서 `route.fulfill()`로 응답 제공  
+  - **URL 매칭**: glob `**/path**`는 의도한 경로와 안 맞을 수 있으므로, `(req) => new URL(req.url()).pathname === "/api/..."` 형태의 **pathname 기준 predicate**를 사용한다.
+
+## 테스트 구성
+
+- **describe**: 페이지 또는 기능 단위 (예: "마이페이지 비인증", "마이페이지 인증 (관심 리스트·구독)")
+- **test**: 한 시나리오당 하나의 동작·기대 결과를 서술 (예: "비인증 시 /mypage 접속하면 / 로 리다이렉트된다")
+- **중복 제거**: 공통 설정(모킹, 로케일)은 `beforeEach`에 두고, 각 test는 `page.goto`와 assertion만 담당한다.
+
+## 실행
+
+- `npm run test:e2e` — 전체 E2E (서버 자동 기동)
+- `npm run test:e2e:local` — 이미 떠 있는 서버로만 실행 (`NO_WEB_SERVER=1`)
+- Node 18 이상 필요 (Playwright 요구 사항)
+
+## 규칙 요약
+
+- 새 페이지/기능 추가 시 **해당 경로·플로우에 대한 E2E**를 추가한다.
+- assertion은 **역할·라벨·번역 키** 기준으로 작성하고, 로딩·리다이렉트를 고려해 **필요 시 대기**를 넣는다.
+- 인증·외부 API가 관여하면 **모킹**으로 일관되게 재현하고, 라우트 매칭은 **pathname**으로 한다.
