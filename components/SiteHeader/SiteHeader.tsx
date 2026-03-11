@@ -32,7 +32,7 @@ export const SiteHeader = () => {
             </h1>
             <Link
               href="/about"
-              className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
               aria-label={t("headerServiceDescription")}
             >
               {t("headerServiceDescription")}
