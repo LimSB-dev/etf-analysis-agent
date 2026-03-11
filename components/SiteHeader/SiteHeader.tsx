@@ -16,7 +16,7 @@ export const SiteHeader = () => {
   return (
     <>
       <header
-        className="w-full bg-white px-4 py-3 dark:bg-gray-950 sm:px-6 lg:px-8"
+        className="w-full px-4 py-3 sm:px-6 lg:px-8"
         role="banner"
         aria-label={t("pageTitle")}
       >
