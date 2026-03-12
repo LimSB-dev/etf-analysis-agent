@@ -54,7 +54,9 @@ export function useLocaleState(): LocaleContextValue {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const { data: session, status } = useSession()
+  const sessionResult = useSession()
+  const session = sessionResult?.data ?? null
+  const status = sessionResult?.status ?? "loading"
   const [locale, setLocaleState] = useState<Locale>(defaultLocale)
   const [hydrated, setHydrated] = useState(false)
 

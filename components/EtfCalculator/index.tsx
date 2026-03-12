@@ -59,7 +59,9 @@ export function EtfCalculator() {
     selectedEtf != null
       ? userThresholdsByEtf[selectedEtf.id] ?? DEFAULT_THRESHOLDS
       : DEFAULT_THRESHOLDS;
-  const { data: session, status: sessionStatus } = useSession();
+  const sessionResult = useSession();
+  const session = sessionResult?.data ?? null;
+  const sessionStatus = sessionResult?.status ?? "loading";
 
   useEffect(() => {
     if (sessionStatus !== "authenticated") {

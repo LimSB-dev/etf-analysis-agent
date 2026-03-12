@@ -10,7 +10,9 @@ import { SignInModal } from "./SignInModal";
 export const SiteHeader = () => {
   const t = useTranslations();
   const tAuth = useTranslations("auth");
-  const { data: session, status } = useSession();
+  const sessionResult = useSession();
+  const session = sessionResult?.data ?? null;
+  const status = sessionResult?.status ?? "loading";
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
