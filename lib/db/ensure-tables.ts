@@ -28,17 +28,6 @@ export async function ensureAuthTables(): Promise<void> {
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS locale varchar(8)`;
 
   await sql`
-    CREATE TABLE IF NOT EXISTS user_etf_preferences (
-      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      etf_id varchar(64) NOT NULL,
-      buy_premium_threshold real NOT NULL DEFAULT -1,
-      sell_premium_threshold real NOT NULL DEFAULT 1,
-      updated_at timestamptz NOT NULL DEFAULT now(),
-      PRIMARY KEY (user_id, etf_id)
-    )
-  `;
-
-  await sql`
     CREATE TABLE IF NOT EXISTS user_preferences (
       user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       preferences jsonb NOT NULL DEFAULT '{}',

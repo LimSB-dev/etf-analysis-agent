@@ -86,17 +86,6 @@ npm run dev
    ```
 4. CRON: **15:00 KST에 계산이 실행되면** 장 마감(15:30) 전에 알림을 받을 수 있습니다. 이 API가 호출된 시점의 시세로 괴리율·신호를 계산합니다. Vercel Cron은 지연이 있을 수 있으므로, **15:00에 받으려면 [cron-job.org](https://cron-job.org) 등 외부 cron에서 15:00 KST에 `GET https://<배포URL>/api/telegram/cron` + `Authorization: Bearer <CRON_SECRET>` 호출을 권장합니다.** 메시지에는 "기준 시각: YYYY-MM-DD HH:mm KST"가 포함됩니다.
 
-## DB 마이그레이션
-
-`user_etf_preferences`(ETF당 1 row) → `user_preferences`(한 유저 1 row, JSONB)로 테이블 구조를 바꾼 경우, 기존 데이터 이전을 위해 한 번 실행:
-
-```bash
-npm run db:migrate
-```
-
-- `DATABASE_URL` 필요 (`.env.local`에 있으면 스크립트가 자동 로드).
-- `user_preferences` 테이블이 없으면 생성 후, `user_etf_preferences` 데이터를 집계해 복사. 이미 있는 유저는 `ON CONFLICT DO NOTHING`으로 건너뜀.
-
 ## E2E 테스트
 
 ```bash
