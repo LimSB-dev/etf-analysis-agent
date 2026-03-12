@@ -106,18 +106,18 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
-          <StoreProvider>
-            <I18nProvider>
-              <AuthProvider>
+          <AuthProvider>
+            <StoreProvider>
+              <I18nProvider>
                 <div className="flex min-h-screen flex-col max-w-4xl justify-center mx-auto">
                   <SiteHeader />
                   {children}
                   <Footer />
                 </div>
-              </AuthProvider>
-              <Analytics />
-            </I18nProvider>
-          </StoreProvider>
+                <Analytics />
+              </I18nProvider>
+            </StoreProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
