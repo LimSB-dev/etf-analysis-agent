@@ -16,8 +16,7 @@
     "test:e2e:headed": "playwright test --headed",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
-    "db:migrate": "npx tsx scripts/migrate-user-preferences.ts"
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",

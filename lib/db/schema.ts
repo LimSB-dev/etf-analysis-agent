@@ -6,7 +6,6 @@ import {
   timestamp,
   integer,
   uniqueIndex,
-  real,
   jsonb,
 } from "drizzle-orm/pg-core";
 
@@ -54,25 +53,6 @@ export const userPreferences = pgTable("user_preferences", {
     .notNull()
     .defaultNow(),
 });
-
-/** @deprecated ETF당 1 row 구조. user_preferences(한 유저 1 row)로 이전됨. 마이그레이션 후 제거 예정 */
-export const userEtfPreferences = pgTable(
-  "user_etf_preferences",
-  {
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    etfId: varchar("etf_id", { length: 64 }).notNull(),
-    buyPremiumThreshold: real("buy_premium_threshold").notNull().default(-1),
-    sellPremiumThreshold: real("sell_premium_threshold").notNull().default(1),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("user_etf_preferences_user_etf_idx").on(table.userId, table.etfId),
-  ]
-);
 
 // ---------------------------------------------------------------------------
 // OAuth 계정 테이블 (oauth_accounts)
@@ -173,8 +153,6 @@ export type UserType = typeof users.$inferSelect;
 export type NewUserType = typeof users.$inferInsert;
 export type UserPreferencesType = typeof userPreferences.$inferSelect;
 export type NewUserPreferencesType = typeof userPreferences.$inferInsert;
-export type UserEtfPreferenceType = typeof userEtfPreferences.$inferSelect;
-export type NewUserEtfPreferenceType = typeof userEtfPreferences.$inferInsert;
 export type OAuthAccountType = typeof oauthAccounts.$inferSelect;
 export type NewOAuthAccountType = typeof oauthAccounts.$inferInsert;
 export type TelegramLinkTokenType = typeof telegramLinkTokens.$inferSelect;
