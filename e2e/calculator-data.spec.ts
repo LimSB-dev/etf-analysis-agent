@@ -33,10 +33,14 @@ test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () =>
 
     const main = page.getByRole("main");
 
-    await expect(main.getByText(t.currentPrice)).toBeVisible();
-    await expect(main.getByText(t.realtimeEstimatedFairPrice)).toBeVisible();
-    await expect(main.getByText(t.baseIndex)).toBeVisible();
-    await expect(main.getByText(t.dataProvidedByNaver)).toBeVisible();
+    await expect(main.getByText(t.currentPrice, { exact: true })).toBeVisible();
+    await expect(
+      main.getByText(t.realtimeEstimatedFairPrice, { exact: true }),
+    ).toBeVisible();
+    await expect(main.getByText(t.baseIndex, { exact: true })).toBeVisible();
+    await expect(
+      main.getByText(t.dataProvidedByNaver, { exact: true }),
+    ).toBeVisible();
 
     const krwPattern = /₩[\d,]+/;
     await expect(main.locator(`text=${krwPattern}`).first()).toBeVisible();
