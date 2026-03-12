@@ -33,12 +33,11 @@ test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () =>
 
     const main = page.getByRole("main");
 
-    // 첫 번째 카드 라벨: 장 열림 시 "현재가", 장 마감 시 "장 마감 종가"
-    await expect(
-      main.getByText(
-        new RegExp(`${t.currentPrice}|${t.priceAfterMarketClose}`),
-      ),
-    ).toBeVisible();
+    // 첫 번째 카드 라벨: 장 열림 시 "현재가", 장 마감 시 "장 마감 종가" (exact로 수식 문구 제외)
+    const priceLabel = main
+      .getByText(t.currentPrice, { exact: true })
+      .or(main.getByText(t.priceAfterMarketClose, { exact: true }));
+    await expect(priceLabel).toBeVisible();
     await expect(
       main.getByText(t.realtimeEstimatedFairPrice, { exact: true }),
     ).toBeVisible();
