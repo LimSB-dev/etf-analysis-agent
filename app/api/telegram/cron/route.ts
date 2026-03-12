@@ -1,7 +1,7 @@
 /**
  * CRON: 중요한 것은 **메시지 도착 시각이 아니라, 몇 시 시세로 계산했는지**임.
- * - 09:30 KST에 이 API가 호출되어야 getEtfList()가 09:30 시세로 괴리율·신호를 계산함.
- * - Vercel Cron은 지연이 크므로, 09:30 기준 값을 쓰려면 외부 cron으로 09:30 KST에 이 URL 호출 권장.
+ * - 15:00 KST에 호출하면 마감(15:30) 전에 알림을 받아 거래할 수 있음.
+ * - Vercel Cron은 지연이 있을 수 있으므로, 15:00 기준 값을 쓰려면 외부 cron으로 15:00 KST에 이 URL 호출 권장.
  */
 
 import { NextRequest, NextResponse } from "next/server"
@@ -23,7 +23,7 @@ function formatPremium(value: number): string {
   return `${value.toFixed(2)}%`
 }
 
-/** KST 기준 시각 문자열 (예: 2025-03-10 09:30) */
+/** KST 기준 시각 문자열 (예: 2025-03-10 15:00) */
 function formatKstTime(date: Date): string {
   const opts: Intl.DateTimeFormatOptions = {
     timeZone: "Asia/Seoul",
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
   let personalSent = 0
   let digestSent = 0
 
-  // 1) KV 구독 (봇에서 ETF/기준 선택한 사용자)
+  // 1) KV 구독 (봇에서 ETF/기준 선택한 사용자) — 매수/매도 없어도 홀드라도 1통 전송
   const subscriptions = await listSubscriptions()
   for (const sub of subscriptions) {
     const etf = etfByTicker.get(sub.etf_ticker)
@@ -122,15 +122,14 @@ export async function GET(request: NextRequest) {
     const buyTrigger = etf.premium <= sub.premium_threshold
     const sellTrigger =
       sub.sell_threshold != null && etf.premium >= sub.sell_threshold
-    if (!buyTrigger && !sellTrigger) {
-      continue
-    }
     const signal =
       buyTrigger && sellTrigger
         ? "🟢 매수 / 🔴 매도"
         : buyTrigger
           ? "🟢 매수"
-          : "🔴 매도"
+          : sellTrigger
+            ? "🔴 매도"
+            : "⚪ HOLD"
     const line =
       `${etf.name}\n` +
       `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}`
@@ -150,6 +149,7 @@ export async function GET(request: NextRequest) {
     .innerJoin(userPreferences, eq(users.id, userPreferences.userId))
     .where(sql`${users.telegramId} is not null`)
 
+  // 2) DB 연동 사용자 (마이페이지 관심 리스트) — 기준선 충족 시에만 개별 알림. 요약(3번)에서 전 ETF 신호(BUY/SELL/HOLD) 전송.
   for (const row of linkedUsers) {
     const chatId = Number.parseInt(row.telegramId ?? "", 10)
     if (!Number.isFinite(chatId)) {

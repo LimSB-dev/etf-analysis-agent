@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
 
         const welcomeMsg =
           synced > 0
-            ? `✅ 연결되었습니다.\n\n관심 리스트 ${synced}개 ETF에 대해 매수·매도 기준대로 알림을 보내드립니다.\n매일 평일 09:30(KST)에 조건을 확인합니다.`
+            ? `✅ 연결되었습니다.\n\n관심 리스트 ${synced}개 ETF에 대해 매수·매도 기준대로 알림을 보내드립니다.\n매일 평일 15:00(KST)에 조건을 확인해, 장 마감(15:30) 전에 알림을 보내드립니다.`
             : "✅ 연결되었습니다.\n관심 리스트에 ETF를 추가한 뒤 마이페이지에서 매수·매도 기준을 설정하고 저장하면, 해당 설정대로 알림을 보내드립니다."
         const sent = await sendText(chatId, welcomeMsg)
         return NextResponse.json({ ok: sent.ok })
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
       `✅ 구독이 완료되었습니다.\n\n` +
         `ETF: ${etf.name}\n` +
         `${sellText}\n\n` +
-        `매일 평일 09:30에 조건을 확인해 알림을 보냅니다.`,
+        `매일 평일 15:00에 조건을 확인해, 장 마감(15:30) 전에 알림을 보냅니다.`,
     )
     return NextResponse.json({ ok: true })
   }
