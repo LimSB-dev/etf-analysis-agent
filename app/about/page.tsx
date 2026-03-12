@@ -12,7 +12,7 @@ export default function AboutPage() {
           className="prose prose-gray dark:prose-invert max-w-none"
           aria-label={t("title")}
         >
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl mb-2">
+          <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-xl mb-2">
             {t("title")}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-base mb-8">

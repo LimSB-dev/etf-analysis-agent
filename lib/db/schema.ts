@@ -24,6 +24,7 @@ export const users = pgTable("users", {
   emailVerified: timestamp("email_verified", { withTimezone: true, mode: "date" }),
   // 확장 필드
   telegramId: varchar("telegram_id", { length: 64 }),
+  locale: varchar("locale", { length: 8 }),
   role: varchar("role", { length: 32 }).notNull().default("FREE"),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
     .notNull()

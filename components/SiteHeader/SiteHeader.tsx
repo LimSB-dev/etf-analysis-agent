@@ -37,6 +37,13 @@ export const SiteHeader = () => {
             >
               {t("headerServiceDescription")}
             </Link>
+            <Link
+              href="/guide"
+              className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              aria-label={t("headerGuideLabel")}
+            >
+              {t("headerGuideLabel")}
+            </Link>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {status === "loading" ? (

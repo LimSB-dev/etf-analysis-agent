@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { authOptions } from "@/auth/auth";
 import { db } from "@/lib/db";
 import { userPreferences, users } from "@/lib/db/schema";
+import { isValidLocale, type Locale } from "@/lib/i18n/config";
 
 export type EtfPreferenceItemType = {
   buyPremiumThreshold: number;
@@ -13,6 +14,7 @@ export type EtfPreferenceItemType = {
 export interface MypagePreferencesResponseType {
   preferences: Record<string, EtfPreferenceItemType>;
   telegramLinked?: boolean;
+  locale?: Locale | null;
 }
 
 const DEFAULT_BUY = -1;
@@ -34,7 +36,7 @@ export async function GET(): Promise<
       .limit(1)
       .then((rows) => rows[0] ?? null),
     db
-      .select({ telegramId: users.telegramId })
+      .select({ telegramId: users.telegramId, locale: users.locale })
       .from(users)
       .where(eq(users.id, session.user.id))
       .limit(1)
@@ -57,9 +59,13 @@ export async function GET(): Promise<
     }
   }
 
+  const locale =
+    userRow?.locale && isValidLocale(userRow.locale) ? userRow.locale : null;
+
   return NextResponse.json({
     preferences,
     telegramLinked: Boolean(userRow?.telegramId),
+    locale,
   });
 }
 
@@ -71,43 +77,51 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { preferences?: Record<string, { buyPremiumThreshold?: number; sellPremiumThreshold?: number }> };
+  let body: {
+    preferences?: Record<string, { buyPremiumThreshold?: number; sellPremiumThreshold?: number }>;
+    locale?: string;
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const prefs = body.preferences;
-  if (!prefs || typeof prefs !== "object") {
-    return GET();
-  }
-
   const userId = session.user.id;
-  const nextPrefs: Record<string, { buyPremiumThreshold: number; sellPremiumThreshold: number }> = {};
-  for (const [etfId, value] of Object.entries(prefs)) {
-    if (!etfId || typeof value !== "object") {
-      continue;
-    }
-    const buy = typeof value.buyPremiumThreshold === "number" ? value.buyPremiumThreshold : DEFAULT_BUY;
-    const sell = typeof value.sellPremiumThreshold === "number" ? value.sellPremiumThreshold : DEFAULT_SELL;
-    nextPrefs[etfId] = { buyPremiumThreshold: buy, sellPremiumThreshold: sell };
+
+  if (body.locale !== undefined && isValidLocale(body.locale)) {
+    await db
+      .update(users)
+      .set({ locale: body.locale })
+      .where(eq(users.id, userId));
   }
 
-  await db
-    .insert(userPreferences)
-    .values({
-      userId,
-      preferences: nextPrefs,
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: userPreferences.userId,
-      set: {
+  const prefs = body.preferences;
+  if (prefs && typeof prefs === "object") {
+    const nextPrefs: Record<string, { buyPremiumThreshold: number; sellPremiumThreshold: number }> = {};
+    for (const [etfId, value] of Object.entries(prefs)) {
+      if (!etfId || typeof value !== "object") {
+        continue;
+      }
+      const buy = typeof value.buyPremiumThreshold === "number" ? value.buyPremiumThreshold : DEFAULT_BUY;
+      const sell = typeof value.sellPremiumThreshold === "number" ? value.sellPremiumThreshold : DEFAULT_SELL;
+      nextPrefs[etfId] = { buyPremiumThreshold: buy, sellPremiumThreshold: sell };
+    }
+    await db
+      .insert(userPreferences)
+      .values({
+        userId,
         preferences: nextPrefs,
         updatedAt: new Date(),
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: userPreferences.userId,
+        set: {
+          preferences: nextPrefs,
+          updatedAt: new Date(),
+        },
+      });
+  }
 
   return GET();
 }

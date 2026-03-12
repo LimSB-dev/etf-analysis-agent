@@ -25,6 +25,7 @@ export async function setupMypageMocks(
   options: {
     preferences?: MypagePreferencesMockType;
     telegramLinked?: boolean;
+    locale?: string | null;
   } = {},
 ): Promise<void> {
   const { preferences = {}, telegramLinked = false } = options;
@@ -43,18 +44,19 @@ export async function setupMypageMocks(
 
   await page.route(/\/api\/mypage\/preferences\/?(\?.*)?$/, (route) => {
     const method = route.request().method();
+    const body = { preferences, telegramLinked, locale: options.locale ?? null };
     if (method === "GET") {
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ preferences, telegramLinked }),
+        body: JSON.stringify(body),
       });
     }
     if (method === "PATCH") {
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ preferences, telegramLinked }),
+        body: JSON.stringify(body),
       });
     }
     return route.continue();
