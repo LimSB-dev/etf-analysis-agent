@@ -10,7 +10,9 @@ import { SignInModal } from "./SignInModal";
 export const SiteHeader = () => {
   const t = useTranslations();
   const tAuth = useTranslations("auth");
-  const { data: session, status } = useSession();
+  const sessionResult = useSession();
+  const session = sessionResult?.data ?? null;
+  const status = sessionResult?.status ?? "loading";
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
@@ -36,6 +38,13 @@ export const SiteHeader = () => {
               aria-label={t("headerServiceDescription")}
             >
               {t("headerServiceDescription")}
+            </Link>
+            <Link
+              href="/guide"
+              className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              aria-label={t("headerGuideLabel")}
+            >
+              {t("headerGuideLabel")}
             </Link>
           </div>
           <div className="flex shrink-0 items-center gap-2">

@@ -8,16 +8,63 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Footer } from "@/components/Footer";
+import { StructuredData } from "@/components/StructuredData";
+import { SITE_URL } from "@/lib/site-config";
 import "./globals.css";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
+const siteTitle = "ETF 프리미엄 분석 플랫폼 | TIGER·KODEX·ACE 미국 ETF 괴리율·매수매도 신호";
+const siteDescription =
+  "한국 상장 미국 ETF(TIGER, KODEX, ACE)의 실시간 괴리율(프리미엄)·iNAV 분석, 매수/매도 신호, 프리미엄 추이·전략 시뮬레이션을 제공하는 무료 분석 도구입니다.";
+
 export const metadata: Metadata = {
-  title: "ETF 프리미엄 분석 플랫폼 | ETF Premium Analysis",
-  description:
-    "한국 상장 미국 ETF(TIGER, KODEX, ACE)의 프리미엄을 실시간으로 분석하고 매수/매도 신호를 확인하세요.",
-  generator: "v0.app",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: siteTitle,
+    template: "%s | ETF 프리미엄 분석",
+  },
+  description: siteDescription,
+  keywords: [
+    "ETF",
+    "프리미엄",
+    "괴리율",
+    "NAV",
+    "iNAV",
+    "TIGER",
+    "KODEX",
+    "ACE",
+    "미국나스닥100",
+    "S&P500",
+    "반도체",
+    "매수신호",
+    "매도신호",
+    "ETF 분석",
+  ],
+  authors: [{ name: "Canary Lab", url: "https://canary-lab.vercel.app" }],
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    url: SITE_URL,
+    siteName: "ETF 프리미엄 분석 플랫폼",
+    title: siteTitle,
+    description: siteDescription,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "ETF 프리미엄 분석 플랫폼 - 한국 상장 미국 ETF 괴리율·매수매도 신호",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+    images: ["/opengraph-image"],
+  },
   icons: {
     icon: [
       {
@@ -35,6 +82,13 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-icon.png",
   },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
 };
 
 export default function RootLayout({
@@ -45,6 +99,7 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <body className="font-sans antialiased">
+        <StructuredData />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

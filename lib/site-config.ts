@@ -1,3 +1,10 @@
+/** 사이트 절대 URL (메타데이터·OG 이미지 등, 미설정 시 Vercel 배포 URL 또는 로컬) */
+export const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+  (typeof process.env.VERCEL_URL !== "undefined"
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://v0-etf-analysis-agent.vercel.app");
+
 /** GitHub 이슈 목록 URL (환경변수 NEXT_PUBLIC_GITHUB_ISSUES_URL 로 설정, 미설정 시 기본값 사용) */
 export const GITHUB_ISSUES_URL =
   process.env.NEXT_PUBLIC_GITHUB_ISSUES_URL ?? "https://github.com/LimSB-dev/v0-etf-analysis-agent/issues";

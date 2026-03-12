@@ -25,6 +25,7 @@ export async function ensureAuthTables(): Promise<void> {
       created_at timestamptz NOT NULL DEFAULT now()
     )
   `;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS locale varchar(8)`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS user_etf_preferences (

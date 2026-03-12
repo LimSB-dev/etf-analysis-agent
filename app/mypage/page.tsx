@@ -25,7 +25,8 @@ export default function MypagePage() {
   const t = useTranslations("mypage");
   const router = useRouter();
   const pathname = usePathname();
-  const { status } = useSession();
+  const sessionResult = useSession();
+  const status = sessionResult?.status ?? "loading";
   const dispatch = useAppDispatch();
 
   const [preferences, setPreferences] = useState<PreferencesByEtfType>({});

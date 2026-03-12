@@ -33,7 +33,11 @@ test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () =>
 
     const main = page.getByRole("main");
 
-    await expect(main.getByText(t.currentPrice, { exact: true })).toBeVisible();
+    // 첫 번째 카드 라벨: 장 열림 시 "현재가", 장 마감 시 "장 마감 종가" (exact로 수식 문구 제외)
+    const priceLabel = main
+      .getByText(t.currentPrice, { exact: true })
+      .or(main.getByText(t.priceAfterMarketClose, { exact: true }));
+    await expect(priceLabel).toBeVisible();
     await expect(
       main.getByText(t.realtimeEstimatedFairPrice, { exact: true }),
     ).toBeVisible();
@@ -91,12 +95,14 @@ test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () =>
     );
     await expect(resultSignal).toBeVisible({ timeout: 40_000 });
 
-    const signalText = await resultSignal.textContent();
     const premiumBox = page
       .getByText(t.currentPremium)
       .locator("..")
       .locator("..");
     const premiumEl = premiumBox.getByText(/[-+]?\d+[.,]\d+\s*%/);
+    await expect(premiumEl).toBeVisible({ timeout: 5_000 });
+
+    const signalText = await resultSignal.textContent();
     const premiumText = await premiumEl.textContent();
     const premium = parsePremiumFromText(premiumText);
 
@@ -108,8 +114,9 @@ test.describe("데이터 호출 후 화면·로직·API 데이터 검증", () =>
     } else if (signalText?.includes(t.sellAction)) {
       expect(premiumNum).toBeGreaterThanOrEqual(1);
     } else if (signalText?.includes(t.holdAction)) {
-      expect(premiumNum).toBeGreaterThan(-1);
-      expect(premiumNum).toBeLessThan(1);
+      // 관망: 표시값이 -1/1로 반올림될 수 있으므로 구간 [-1, 1] 허용
+      expect(premiumNum).toBeGreaterThanOrEqual(-1);
+      expect(premiumNum).toBeLessThanOrEqual(1);
     }
   });
 
