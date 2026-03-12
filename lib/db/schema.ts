@@ -145,6 +145,27 @@ export const telegramLinkTokens = pgTable("telegram_link_tokens", {
 });
 
 // ---------------------------------------------------------------------------
+// AI 생성 투자 글 (매일 cron으로 1편 생성·저장)
+// ---------------------------------------------------------------------------
+
+export const articles = pgTable("articles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: varchar("title", { length: 512 }).notNull(),
+  slug: varchar("slug", { length: 256 }).notNull().unique(),
+  content: text("content").notNull(),
+  locale: varchar("locale", { length: 8 }).notNull().default("ko"),
+  publishedAt: timestamp("published_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
+});
+
+export type ArticleType = typeof articles.$inferSelect;
+export type NewArticleType = typeof articles.$inferInsert;
+
+// ---------------------------------------------------------------------------
 // Type export (선택)
 // ---------------------------------------------------------------------------
 

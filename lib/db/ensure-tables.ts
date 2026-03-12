@@ -92,4 +92,16 @@ export async function ensureAuthTables(): Promise<void> {
       expires_at timestamptz NOT NULL
     )
   `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS articles (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      title varchar(512) NOT NULL,
+      slug varchar(256) NOT NULL UNIQUE,
+      content text NOT NULL,
+      locale varchar(8) NOT NULL DEFAULT 'ko',
+      published_at timestamptz NOT NULL DEFAULT now(),
+      created_at timestamptz NOT NULL DEFAULT now()
+    )
+  `;
 }
