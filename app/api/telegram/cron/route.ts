@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
 
   const etfByTicker = new Map(etfList.map((e) => [e.ticker, e]))
   let personalSent = 0
+  let digestSent = 0
 
   // 1) KV 구독 (봇에서 ETF/기준 선택한 사용자)
   const subscriptions = await listSubscriptions()
@@ -190,9 +191,56 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // 3) 특정 시간 자동 알림: 연결된 사용자에게 관심 ETF 일일 요약 1통 전송
+  const kstTimeStr = formatKstTime(calculatedAt)
+  for (const row of linkedUsers) {
+    const chatId = Number.parseInt(row.telegramId ?? "", 10)
+    if (!Number.isFinite(chatId)) {
+      continue
+    }
+    const prefs = row.preferences ?? {}
+    const digestLines: string[] = [
+      `📊 관심 ETF 요약 (기준 시각: ${kstTimeStr} KST)`,
+      "",
+    ]
+    for (const [etfId, p] of Object.entries(prefs)) {
+      if (!p || typeof p.buyPremiumThreshold !== "number") {
+        continue
+      }
+      const ticker = ETF_OPTIONS.find((o) => o.id === etfId)?.code ?? null
+      if (!ticker || !ETFS.some((e) => e.ticker === ticker)) {
+        continue
+      }
+      const etf = etfByTicker.get(ticker)
+      if (!etf) {
+        continue
+      }
+      const signal =
+        etf.signal === "BUY"
+          ? "🟢 BUY"
+          : etf.signal === "SELL"
+            ? "🔴 SELL"
+            : "⚪ HOLD"
+      digestLines.push(
+        `${etf.name}\n` +
+          `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}`,
+      )
+      digestLines.push("")
+    }
+    if (digestLines.length <= 2) {
+      continue
+    }
+    const digestText = digestLines.join("\n").trimEnd()
+    const res = await sendText(chatId, digestText)
+    if (res.ok) {
+      digestSent += 1
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     sent: 1,
     personalSent,
+    digestSent,
   })
 }
