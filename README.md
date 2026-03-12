@@ -25,7 +25,7 @@
 
 ### Telegram ETF 알림 봇
 - **웹 로그인 없이**: 텔레그램 봇에서 `/start` → ETF 선택 → 괴리율 기준 선택으로 구독
-- **매수 알림**: 매일 평일 09:30(KST)에 괴리율이 설정값 이하인 ETF에 대해 텔레그램으로 알림 발송
+- **매수 알림**: 매일 평일 15:00(KST)에 괴리율·신호를 계산해 텔레그램으로 알림 발송 (장 마감 15:30 전 수신, 전략 시뮬과 동일한 종가 기준으로 거래 가능)
 - **저장**: Vercel KV(Upstash)에 구독 정보 저장
 
 ### UI·환경
@@ -84,7 +84,7 @@ npm run dev
    ```
    https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<YOUR_VERCEL_DOMAIN>/api/telegram/webhook
    ```
-4. CRON: **중요한 것은 09:30에 계산이 실행되는 것**입니다. 이 API가 호출된 시점의 시세로 괴리율·신호를 계산하므로, 09:30 KST에 호출되어야 "09:30 기준" 값이 메시지에 들어갑니다. 메시지가 09:35에 도착해도 **기준 시각**이 09:30이면 됩니다. Vercel Cron은 지연이 커서 09:52·10:22에 실행되는 경우가 있으므로, **09:30 기준 값을 쓰려면 [cron-job.org](https://cron-job.org) 등 외부 cron에서 09:30 KST에 `GET https://<배포URL>/api/telegram/cron` + `Authorization: Bearer <CRON_SECRET>` 호출을 권장합니다.** 메시지에는 "기준 시각: YYYY-MM-DD HH:mm KST"가 포함됩니다.
+4. CRON: **15:00 KST에 계산이 실행되면** 장 마감(15:30) 전에 알림을 받을 수 있습니다. 이 API가 호출된 시점의 시세로 괴리율·신호를 계산합니다. Vercel Cron은 지연이 있을 수 있으므로, **15:00에 받으려면 [cron-job.org](https://cron-job.org) 등 외부 cron에서 15:00 KST에 `GET https://<배포URL>/api/telegram/cron` + `Authorization: Bearer <CRON_SECRET>` 호출을 권장합니다.** 메시지에는 "기준 시각: YYYY-MM-DD HH:mm KST"가 포함됩니다.
 
 ## DB 마이그레이션
 
