@@ -7,7 +7,7 @@ export const translations = {
     pageDescription:
       "한국 상장 미국 ETF의 프리미엄 추이, 매매 전략을 종합 분석합니다.",
     realtimeAlertTitle: "프리미엄 기준을 나에게 맞게 쓰고 싶으신가요?",
-    realtimeAlertDesc: "매일 괴리율 알림은 텔레그램 채널에서 받을 수 있어요. 개인별 프리미엄 값(매수/매도 기준) 기능을 원하시면 아래 이슈 또는 메일로 요청해 주세요.",
+    realtimeAlertDesc: "실시간·매일 괴리율 알림은 텔레그램 채널에서 받을 수 있어요. 원하는 기능이 있으면 이슈에 작성하거나 메일로 요청해 주세요.",
     realtimeAlertCta: "기능 요청하기",
     alertRequestIssueTitle: "프리미엄 개인화 기능 요청",
     alertRequestIssueBody: "프리미엄 기준(매수/매도 임계값) 개인화 기능을 원합니다.\n\n희망하는 알람 방식:\n- [ ] 이메일\n- [ ] 모바일 앱 푸시\n- [ ] 카카오톡/텔레그램\n- [ ] 기타:",
@@ -120,7 +120,7 @@ export const translations = {
     pageDescription:
       "Comprehensive analysis of premium trends and trading strategies for Korea-listed US ETFs.",
     realtimeAlertTitle: "Want to customize your premium thresholds?",
-    realtimeAlertDesc: "Daily premium alerts are available in our Telegram channel. To request personalized premium (buy/sell) thresholds or other features, use the Issue or Email link below.",
+    realtimeAlertDesc: "Real-time and daily premium alerts are available in our Telegram channel. If you have a feature in mind, open an issue or contact us by email.",
     realtimeAlertCta: "Request feature",
     alertRequestIssueTitle: "Request: Premium customization",
     alertRequestIssueBody: "I would like personalized premium (buy/sell) threshold features.\n\nDesired alert methods:\n- [ ] Email\n- [ ] Mobile app push\n- [ ] KakaoTalk/Telegram\n- [ ] Other:",
