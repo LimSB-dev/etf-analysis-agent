@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 2) DB 연동 사용자 (마이페이지 관심 리스트 + /start 토큰으로 연결한 사용자)
+  // 2) DB 연동 사용자 (마이페이지 관심 리스트) — 관심 ETF 일괄 요약 1통만 전송 (신호별 개별 문자는 보내지 않음)
   const linkedUsers = await db
     .select({
       telegramId: users.telegramId,
@@ -149,49 +149,7 @@ export async function GET(request: NextRequest) {
     .innerJoin(userPreferences, eq(users.id, userPreferences.userId))
     .where(sql`${users.telegramId} is not null`)
 
-  // 2) DB 연동 사용자 (마이페이지 관심 리스트) — 기준선 충족 시에만 개별 알림. 요약(3번)에서 전 ETF 신호(BUY/SELL/HOLD) 전송.
-  for (const row of linkedUsers) {
-    const chatId = Number.parseInt(row.telegramId ?? "", 10)
-    if (!Number.isFinite(chatId)) {
-      continue
-    }
-    const prefs = row.preferences ?? {}
-    for (const [etfId, p] of Object.entries(prefs)) {
-      if (!p || typeof p.buyPremiumThreshold !== "number") {
-        continue
-      }
-      const ticker = ETF_OPTIONS.find((o) => o.id === etfId)?.code ?? null
-      if (!ticker || !ETFS.some((e) => e.ticker === ticker)) {
-        continue
-      }
-      const etf = etfByTicker.get(ticker)
-      if (!etf) {
-        continue
-      }
-      const buyTrigger = etf.premium <= (p.buyPremiumThreshold ?? -1)
-      const sellTrigger =
-        typeof p.sellPremiumThreshold === "number" &&
-        etf.premium >= p.sellPremiumThreshold
-      if (!buyTrigger && !sellTrigger) {
-        continue
-      }
-      const signal =
-        buyTrigger && sellTrigger
-          ? "🟢 매수 / 🔴 매도"
-          : buyTrigger
-            ? "🟢 매수"
-            : "🔴 매도"
-      const line =
-        `${etf.name}\n` +
-        `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}`
-      const res = await sendText(chatId, line)
-      if (res.ok) {
-        personalSent += 1
-      }
-    }
-  }
-
-  // 3) 특정 시간 자동 알림: 연결된 사용자에게 관심 ETF 일일 요약 1통 전송
+  // 관심 ETF 일괄 요약 1통 전송
   const kstTimeStr = formatKstTime(calculatedAt)
   for (const row of linkedUsers) {
     const chatId = Number.parseInt(row.telegramId ?? "", 10)

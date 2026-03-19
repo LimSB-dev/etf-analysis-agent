@@ -6,8 +6,11 @@ export default function AboutPage() {
   const t = useTranslations("about")
 
   return (
-    <main className="flex flex-1 flex-col bg-background py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
+    <main
+      className="flex flex-1 flex-col bg-background py-12 px-4 sm:px-6 lg:px-8"
+      role="main"
+    >
+      <div className="max-w-3xl mx-auto">
         <article
           className="prose prose-gray dark:prose-invert max-w-none"
           aria-label={t("title")}

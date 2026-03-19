@@ -17,20 +17,20 @@ export default function GuidePage() {
           className="prose prose-gray dark:prose-invert max-w-none"
           aria-label={t("title")}
         >
-          <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-xl mb-1">
+          <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-xl mb-2">
             {t("title")}
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
+          <p className="text-base text-gray-600 dark:text-gray-400 mb-2">
             {t("subtitle")}
           </p>
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-10">
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-8">
             {t("description")}
           </p>
 
-          <section className="mb-10" aria-labelledby="guide-nav-inav">
+          <section className="mb-8" aria-labelledby="guide-nav-inav">
             <h2
               id="guide-nav-inav"
-              className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2"
+              className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3"
             >
               {t("sectionNavInavTitle")}
             </h2>
@@ -55,10 +55,10 @@ export default function GuidePage() {
             </ul>
           </section>
 
-          <section className="mb-10" aria-labelledby="guide-premium-tracking">
+          <section className="mb-8" aria-labelledby="guide-premium-tracking">
             <h2
               id="guide-premium-tracking"
-              className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2"
+              className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3"
             >
               {t("sectionPremiumTrackingTitle")}
             </h2>
@@ -86,10 +86,10 @@ export default function GuidePage() {
             </ul>
           </section>
 
-          <section className="mb-10" aria-labelledby="guide-service-usage">
+          <section className="mb-8" aria-labelledby="guide-service-usage">
             <h2
               id="guide-service-usage"
-              className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2"
+              className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3"
             >
               {t("sectionServiceUsageTitle")}
             </h2>

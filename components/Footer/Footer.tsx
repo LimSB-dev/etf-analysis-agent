@@ -17,35 +17,34 @@ export function Footer() {
   return (
     <footer className="mt-auto px-4 sm:px-6 lg:px-8" role="contentinfo">
       <div className="max-w-6xl mx-auto border-t border-gray-200 dark:border-gray-800 py-6">
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
-          <span>{tFooter("copyright", { year })}</span>
-          <span className="text-gray-300 dark:text-gray-600" aria-hidden>
-            ·
-          </span>
-          <a
-            href={CANARY_LAB_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-gray-900 dark:hover:text-gray-200 underline underline-offset-2 transition-colors"
-            aria-label={tFooter("canaryLabBlog")}
-          >
-            {CANARY_LAB_LABEL}
-          </a>
-          <span className="text-gray-300 dark:text-gray-600" aria-hidden>
-            ·
-          </span>
-          <a
-            href={GITHUB_PROFILE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-gray-900 dark:hover:text-gray-200 underline underline-offset-2 transition-colors"
-          >
-            {tFooter("githubProfile")}
-          </a>
-          <span className="text-gray-300 dark:text-gray-600" aria-hidden>
-            ·
-          </span>
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span>{tFooter("copyright", { year })}</span>
+            <span className="text-gray-300 dark:text-gray-600" aria-hidden>
+              ·
+            </span>
+            <a
+              href={CANARY_LAB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-900 dark:hover:text-gray-200 underline underline-offset-2 transition-colors"
+              aria-label={tFooter("canaryLabBlog")}
+            >
+              {CANARY_LAB_LABEL}
+            </a>
+            <span className="text-gray-300 dark:text-gray-600" aria-hidden>
+              ·
+            </span>
+            <a
+              href={GITHUB_PROFILE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-900 dark:hover:text-gray-200 underline underline-offset-2 transition-colors"
+            >
+              {tFooter("githubProfile")}
+            </a>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
             <ThemeToggle />
             <button
               type="button"
