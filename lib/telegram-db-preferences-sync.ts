@@ -116,3 +116,53 @@ export async function mergeKvOnlySubscriptionsIntoUserPreferences(args: {
     await writePreferencesMap(args.userId, prefs)
   }
 }
+
+/**
+ * 마이페이지 preferences JSON에서 스냅샷용 네이버 종목 코드(6자리) 목록 추출
+ */
+export function subscribedTickersFromPreferences(
+  prefs: UserPreferencesJsonType | Record<string, unknown> | null | undefined,
+): string[] {
+  if (!prefs || typeof prefs !== "object") {
+    return []
+  }
+  const out: string[] = []
+  for (const [etfId, raw] of Object.entries(prefs)) {
+    if (!raw || typeof raw !== "object") {
+      continue
+    }
+    const p = raw as { buyPremiumThreshold?: unknown }
+    if (typeof p.buyPremiumThreshold !== "number") {
+      continue
+    }
+    const code = ETF_OPTIONS.find((o) => o.id === etfId)?.code
+    if (code) {
+      out.push(code)
+    }
+  }
+  return out
+}
+
+/**
+ * /my · /subs: KV 구독 + (텔레그램 연동 시) DB 관심 ETF 티커 합집합
+ */
+export async function getSubscribedTickersForTelegramChat(
+  chatId: number,
+): Promise<string[]> {
+  const all = await listSubscriptions()
+  const fromKv = all.filter((s) => s.chat_id === chatId).map((s) => s.etf_ticker)
+  const userId = await getUserIdByTelegramChatId(chatId)
+  let fromDb: string[] = []
+  if (userId) {
+    const row = await db
+      .select({ preferences: userPreferences.preferences })
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId))
+      .limit(1)
+      .then((r) => r[0] ?? null)
+    fromDb = subscribedTickersFromPreferences(
+      (row?.preferences ?? {}) as UserPreferencesJsonType,
+    )
+  }
+  return [...new Set([...fromKv, ...fromDb])]
+}

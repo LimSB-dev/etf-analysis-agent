@@ -29,10 +29,11 @@ import {
 import { isValidLocale } from "@/lib/i18n/config"
 import { SITE_URL, TELEGRAM_CHANNEL_URL } from "@/lib/site-config"
 import {
+  getSubscribedTickersForTelegramChat,
   mergeKvOnlySubscriptionsIntoUserPreferences,
   upsertUserPreferenceFromTelegramSubscription,
 } from "@/lib/telegram-db-preferences-sync"
-import { addSubscription, listSubscriptions } from "@/lib/subscriptions"
+import { addSubscription } from "@/lib/subscriptions"
 import {
   buildTelegramHelpHtml,
   buildTelegramPremiumSnapshotHtml,
@@ -58,6 +59,9 @@ const PREMIUM_THRESHOLDS = [-1, -1.5, -2] as const
 
 /** 매도 기준 옵션 (% 이상 시 매도 알림, 선택 사항) */
 const SELL_THRESHOLDS = [1, 1.5, 2] as const
+
+const DEFAULT_BUY_THRESHOLD = -1
+const DEFAULT_SELL_THRESHOLD = 1
 
 /** Telegram Update 타입 (필요한 필드만, 채널 포스트 포함) */
 interface TelegramUpdateType {
@@ -229,21 +233,8 @@ function buildSubscribedEtfKeyboard(tickers: string[]): InlineKeyboardButtonType
   })
 }
 
-/** ETF 확정 후 매수·매도 기준을 한 번에 선택 (저장은 subsave 콜백) */
-function buildCombinedSubscriptionKeyboard(ticker: string): InlineKeyboardButtonType[][] {
-  const withSell = PREMIUM_THRESHOLDS.map((buy, i) => {
-    const sell = SELL_THRESHOLDS[i]
-    return {
-      text: `매수≤${buy}%·매도+${sell}%`,
-      callback_data: `subsave:${buy}:${sell}:${ticker}`,
-    }
-  })
-  const buyOnly = PREMIUM_THRESHOLDS.map((buy) => ({
-    text: `매수≤${buy}%·매도안함`,
-    callback_data: `subsave:${buy}:x:${ticker}`,
-  }))
-  return [withSell, buyOnly]
-}
+// NOTE: 이전 버전에서 사용하던 subsave(한 화면 기준 선택) 콜백을 위해 남겨둔 헬퍼였습니다.
+// 현재는 ETF 선택 즉시 기본값(-1%, +1%)으로 저장하고, 상세 설정은 웹에서 진행합니다.
 
 export async function POST(request: NextRequest) {
   let update: TelegramUpdateType
@@ -288,7 +279,10 @@ export async function POST(request: NextRequest) {
     if (messageCommand === "/subscribe" || messageCommand === "/구독추가") {
       const sent = await sendMessageWithKeyboard(
         chatId,
-        "알림 받을 ETF를 선택하세요.\n선택 후 매수·매도 기준을 한 화면에서 고르고 저장할 수 있어요.\n\n💡 /help — 전체 안내 · /premium — 지금 괴리율",
+        `알림 받을 ETF를 선택하세요.\n` +
+          `선택하면 기본값(매수 ${DEFAULT_BUY_THRESHOLD}%, 매도 +${DEFAULT_SELL_THRESHOLD}%)으로 바로 구독됩니다.\n` +
+          `기준 조정은 웹 마이페이지에서 진행해 주세요.\n\n` +
+          `💡 /help — 전체 안내 · /premium — 지금 괴리율`,
         buildEtfKeyboard(),
       )
       if (!sent.ok) {
@@ -319,9 +313,7 @@ export async function POST(request: NextRequest) {
     ) {
       const locRaw = await getDbLocaleForTelegramChat(chatId)
       const locale = resolveTelegramLocale(locRaw)
-      const all = await listSubscriptions()
-      const mine = all.filter((s) => s.chat_id === chatId)
-      const tickers = mine.map((s) => s.etf_ticker)
+      const tickers = await getSubscribedTickersForTelegramChat(chatId)
       const snap = await buildTelegramSubscribedPremiumSnapshotHtml(locale, tickers)
       await sendText(
         chatId,
@@ -339,24 +331,11 @@ export async function POST(request: NextRequest) {
       messageCommand === "/수정" ||
       messageCommand === "/update"
     ) {
-      const all = await listSubscriptions()
-      const mine = all.filter((s) => s.chat_id === chatId)
-      const tickers = [...new Set(mine.map((s) => s.etf_ticker))]
-      if (tickers.length === 0) {
-        await sendText(chatId, "아직 구독한 ETF가 없습니다. /subscribe 로 구독을 추가해 주세요.")
-        return NextResponse.json({ ok: true })
-      }
-      const sent = await sendMessageWithKeyboard(
-        chatId,
-        "수정할 ETF를 선택하세요.\n(선택 후 매수·매도 기준을 다시 고를 수 있어요.)",
-        buildSubscribedEtfKeyboard(tickers),
-      )
-      if (!sent.ok) {
-        console.error("[telegram:webhook] /edit send failed", {
-          chatId,
-          error: sent.error ?? "unknown",
-        })
-      }
+      const base = SITE_URL.replace(/\/$/, "")
+      const msg =
+        `구독 기준(매수·매도 %) 수정은 웹 마이페이지에서 진행해 주세요.\n\n` +
+        `➡️ ${base}/mypage`
+      await sendText(chatId, msg)
       return NextResponse.json({ ok: true })
     }
 
@@ -559,15 +538,45 @@ export async function POST(request: NextRequest) {
       await sendText(chatId, "선택한 ETF를 찾을 수 없습니다.")
       return NextResponse.json({ ok: true })
     }
-    const sent = await sendMessageWithKeyboard(
-      chatId,
-      `<b>${escapeHtml(etf.name)}</b>\n\n` +
-        "매수·매도 알림 기준을 아래에서 한 번에 골라 주세요.\n" +
-        "첫 줄은 매수 기준과 매도 기준을 함께 쓰는 조합, 둘째 줄은 매수만 설정합니다.",
-      buildCombinedSubscriptionKeyboard(etf.ticker),
-    )
+
+    const localeFromDb = await getDbLocaleForTelegramChat(chatId)
+    const added = await addSubscription({
+      chat_id: chatId,
+      etf_ticker: etf.ticker,
+      premium_threshold: DEFAULT_BUY_THRESHOLD,
+      sell_threshold: DEFAULT_SELL_THRESHOLD,
+      ...(localeFromDb ? { locale: localeFromDb } : {}),
+    })
+    if (!added) {
+      await sendText(chatId, "구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.")
+      return NextResponse.json({ ok: true })
+    }
+
+    const { synced: preferencesSyncedToWeb } =
+      await upsertUserPreferenceFromTelegramSubscription({
+        chatId,
+        etfTicker: etf.ticker,
+        buyPremiumThreshold: DEFAULT_BUY_THRESHOLD,
+        sellThreshold: DEFAULT_SELL_THRESHOLD,
+      })
+
+    const base = SITE_URL.replace(/\/$/, "")
+    const noteKo = preferencesSyncedToWeb
+      ? `✅ 구독 완료: <b>${escapeHtml(etf.name)}</b>\n` +
+        `매수 ${DEFAULT_BUY_THRESHOLD}% 이하 · 매도 +${DEFAULT_SELL_THRESHOLD}% 이상\n\n` +
+        `같은 설정이 웹 마이페이지에도 저장되었습니다.\n` +
+        `기준을 바꾸려면 웹에서 수정해 주세요: ${escapeHtml(`${base}/mypage`)}`
+      : `✅ 구독 완료: <b>${escapeHtml(etf.name)}</b>\n` +
+        `매수 ${DEFAULT_BUY_THRESHOLD}% 이하 · 매도 +${DEFAULT_SELL_THRESHOLD}% 이상\n\n` +
+        `웹(마이페이지)에서 텔레그램을 연결하면, 구독이 웹에도 같이 저장됩니다.\n` +
+        `기준을 바꾸려면 웹에서 수정해 주세요: ${escapeHtml(`${base}/mypage`)}`
+
+    const sent = await sendText(chatId, noteKo, {
+      parseMode: "HTML",
+      disableWebPagePreview: true,
+    })
     if (!sent.ok) {
-      console.error("[telegram:webhook] etf pick send failed", {
+      console.error("[telegram:webhook] etf default subscribe notify failed", {
         chatId,
         error: sent.error ?? "unknown",
         ticker,
@@ -584,104 +593,15 @@ export async function POST(request: NextRequest) {
       await sendText(chatId, "선택한 ETF를 찾을 수 없습니다. /subs 로 구독을 확인해 주세요.")
       return NextResponse.json({ ok: true })
     }
-    const sent = await sendMessageWithKeyboard(
+    const base = SITE_URL.replace(/\/$/, "")
+    await sendText(
       chatId,
-      `<b>${escapeHtml(etf.name)}</b>\n\n` +
-        "매수·매도 기준을 한 화면에서 다시 골라 저장해 주세요.",
-      buildCombinedSubscriptionKeyboard(etf.ticker),
+      `구독 기준 수정은 웹 마이페이지에서 진행해 주세요.\n\n➡️ ${base}/mypage`,
     )
-    if (!sent.ok) {
-      console.error("[telegram:webhook] sub edit pick send failed", {
-        chatId,
-        error: sent.error ?? "unknown",
-        ticker,
-      })
-    }
-    return NextResponse.json({ ok: sent.ok })
+    return NextResponse.json({ ok: true })
   }
 
-  // 매수·매도 동시 저장(신규 플로우): subsave:{buy}:{sell|x}:{ticker}
-  if (data.startsWith("subsave:")) {
-    const rest = data.slice(8)
-    const parts = rest.split(":")
-    if (parts.length < 3) {
-      await sendText(chatId, "잘못된 선택입니다. /subscribe 로 다시 시도해 주세요.")
-      return NextResponse.json({ ok: true })
-    }
-    const buyStr = parts[0] ?? ""
-    const sellStr = parts[1] ?? ""
-    const ticker = parts.slice(2).join(":")
-    const buy = Number.parseFloat(buyStr)
-    if (
-      !Number.isFinite(buy) ||
-      !PREMIUM_THRESHOLDS.includes(buy as (typeof PREMIUM_THRESHOLDS)[number])
-    ) {
-      await sendText(chatId, "잘못된 선택입니다. /subscribe 로 다시 시도해 주세요.")
-      return NextResponse.json({ ok: true })
-    }
-    const etf = ticker ? ETFS.find((e) => e.ticker === ticker) : null
-    if (!etf) {
-      await sendText(chatId, "선택한 ETF를 찾을 수 없습니다. /subscribe 로 다시 시도해 주세요.")
-      return NextResponse.json({ ok: true })
-    }
-    let sellThreshold: number | undefined
-    if (sellStr !== "x" && sellStr !== "none") {
-      const s = Number.parseFloat(sellStr)
-      if (
-        !Number.isFinite(s) ||
-        !SELL_THRESHOLDS.includes(s as (typeof SELL_THRESHOLDS)[number])
-      ) {
-        await sendText(chatId, "잘못된 선택입니다. /subscribe 로 다시 시도해 주세요.")
-        return NextResponse.json({ ok: true })
-      }
-      sellThreshold = s
-    }
-    const localeFromDb = await getDbLocaleForTelegramChat(chatId)
-    const added = await addSubscription({
-      chat_id: chatId,
-      etf_ticker: etf.ticker,
-      premium_threshold: buy,
-      sell_threshold: sellThreshold,
-      ...(localeFromDb ? { locale: localeFromDb } : {}),
-    })
-    if (!added) {
-      const r = await sendText(
-        chatId,
-        "구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-      )
-      if (!r.ok) {
-        console.error("[telegram:webhook] subsave add failed + notify failed", {
-          chatId,
-          error: r.error ?? "unknown",
-        })
-      }
-      return NextResponse.json({ ok: true })
-    }
-    const sellText =
-      sellThreshold != null
-        ? `매수: ${buy}% 이하 / 매도: +${sellThreshold}% 이상`
-        : `매수: ${buy}% 이하`
-    const { synced: preferencesSyncedToWeb } =
-      await upsertUserPreferenceFromTelegramSubscription({
-        chatId,
-        etfTicker: etf.ticker,
-        buyPremiumThreshold: buy,
-        sellThreshold,
-      })
-    const done = await sendSubscriptionCompleteWithBrokerKeyboard(
-      chatId,
-      etf.name,
-      sellText,
-      preferencesSyncedToWeb,
-    )
-    if (!done.ok) {
-      console.error("[telegram:webhook] subsave complete message send failed", {
-        chatId,
-        error: done.error ?? "unknown",
-      })
-    }
-    return NextResponse.json({ ok: done.ok })
-  }
+  // subsave:* 는 더 이상 사용하지 않음 (ETF 선택 즉시 기본값으로 저장)
 
   // 매수 기준 선택: thresh:{값}:{ticker} (구 인라인 메시지 호환)
   if (data.startsWith("thresh:")) {
