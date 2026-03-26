@@ -106,16 +106,15 @@ export function buildSubscriptionQuickLinksHtml(
   etfCode: string,
   locale: Locale = "ko",
   selectedBrokerIds: string[] | null = null,
+  siteUrl?: string,
 ): string {
   const code = normalizeSixDigitCode(etfCode)
   if (!code) {
     return ""
   }
   const quickTitle = locale === "en" ? "🔗 Quick links" : "🔗 빠른 이동"
-  const schemeNote =
-    locale === "en"
-      ? "📱 App deep links (behavior varies by app/version)"
-      : "📱 앱 딥링크(앱·버전마다 다를 수 있음)"
+  const base =
+    siteUrl && siteUrl.trim() !== "" ? siteUrl.replace(/\/$/, "") : null
 
   let ordered: BrokerDeepLinkOptionType[] = []
 
@@ -140,27 +139,26 @@ export function buildSubscriptionQuickLinksHtml(
   }
 
   const lines: string[] = ["", quickTitle]
-  const webParts: string[] = []
-  const appParts: string[] = []
+  const parts: string[] = []
 
   for (const o of ordered) {
     const label = locale === "en" ? o.labelEn : o.labelKo
-    const url = o.build(code)
-    if (o.id === "naver" || o.id === "toss") {
-      webParts.push(
-        `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`,
-      )
+    const raw = o.build(code)
+    const url =
+      raw.startsWith("http://") || raw.startsWith("https://")
+        ? raw
+        : base
+          ? `${base}/go/${encodeURIComponent(o.id)}/${code}`
+          : null
+    if (url) {
+      parts.push(`<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`)
     } else {
-      appParts.push(`${escapeHtml(label)}: ${url}`)
+      // Telegram HTML은 비-HTTP(s) 스킴을 링크로 거부할 수 있어, 미제공 시 텍스트로만 노출
+      parts.push(`${escapeHtml(label)}: ${escapeHtml(raw)}`)
     }
   }
 
-  if (webParts.length > 0) {
-    lines.push(webParts.join(" · "))
-  }
-  if (appParts.length > 0) {
-    lines.push("", schemeNote, ...appParts)
-  }
+  lines.push(parts.join(" · "))
 
   return lines.join("\n")
 }

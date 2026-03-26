@@ -2,7 +2,7 @@
  * Telegram Bot Webhook (POST)
  * - /start: 환영·안내( /help )만, ETF 키보드 없음
  * - /subscribe · /구독추가: ETF 선택 후 매수·매도 기준 한 화면(subsave)에서 저장
- * - /start <token>: 마이페이지에서 발급한 토큰으로 관심 리스트 구독 동기화 후 환영 메시지
+ * - /start <token>: 마이페이지에서 발급한 토큰으로 관심 리스트 구독 동기화 후 안내(증권사 키보드는 자동 표시하지 않음; /brokers)
  * - ETF 선택 시: 매수·매도 동시 선택 Keyboard (기존 thresh/sell 콜백은 예전 메시지 호환용 유지)
  * - /brokers (또는 /증권사): 증권사 선택 화면만 다시 표시
  * - /help (또는 /도움): 사용 가능한 기능 안내
@@ -22,6 +22,7 @@ import { BROKER_DEEP_LINK_IDS, escapeHtml } from "@/lib/broker-deep-links"
 import {
   clearPendingBrokerSel,
   getBrokerLinkPrefs,
+  normalizeBrokerIds,
   getPendingBrokerSel,
   setBrokerLinkPrefs,
   setPendingBrokerSel,
@@ -30,6 +31,7 @@ import { isValidLocale } from "@/lib/i18n/config"
 import { SITE_URL, TELEGRAM_CHANNEL_URL } from "@/lib/site-config"
 import {
   getSubscribedTickersForTelegramChat,
+  getUserIdByTelegramChatId,
   mergeKvOnlySubscriptionsIntoUserPreferences,
   upsertUserPreferenceFromTelegramSubscription,
 } from "@/lib/telegram-db-preferences-sync"
@@ -102,26 +104,6 @@ async function sendBrokerPickerPrompt(chatId: number): Promise<void> {
   await sendMessageWithKeyboard(
     chatId,
     brokerPromptHtml(initial, loc),
-    buildBrokerPickKeyboard(initial, loc),
-    "HTML",
-  )
-}
-
-/** 환영/완료 본문 아래에 증권사 키보드를 붙여 한 통에 표시 (두 번째 메시지 누락 방지) */
-async function sendPlainHeaderWithBrokerKeyboard(
-  chatId: number,
-  headerPlain: string,
-): Promise<{ ok: boolean; error?: string }> {
-  const locRaw = await getDbLocaleForTelegramChat(chatId)
-  const loc = locRaw === "en" ? "en" : "ko"
-  const existing = await getBrokerLinkPrefs(chatId)
-  const initial = existing ?? []
-  await setPendingBrokerSel(chatId, initial)
-  const html =
-    `${escapeHtml(headerPlain)}\n\n—\n\n${brokerPromptHtml(initial, loc)}`
-  return sendMessageWithKeyboard(
-    chatId,
-    html,
     buildBrokerPickKeyboard(initial, loc),
     "HTML",
   )
@@ -314,7 +296,33 @@ export async function POST(request: NextRequest) {
       const locRaw = await getDbLocaleForTelegramChat(chatId)
       const locale = resolveTelegramLocale(locRaw)
       const tickers = await getSubscribedTickersForTelegramChat(chatId)
-      const snap = await buildTelegramSubscribedPremiumSnapshotHtml(locale, tickers)
+      let brokerIds: string[] | null = null
+      const userId = await getUserIdByTelegramChatId(chatId)
+      if (userId) {
+        const row = await db
+          .select({ telegramBrokerLinkIds: userPreferences.telegramBrokerLinkIds })
+          .from(userPreferences)
+          .where(eq(userPreferences.userId, userId))
+          .limit(1)
+          .then((r) => r[0] ?? null)
+        const dbIds = row?.telegramBrokerLinkIds
+        if (Array.isArray(dbIds) && dbIds.every((x) => typeof x === "string")) {
+          brokerIds = normalizeBrokerIds(dbIds)
+        }
+      }
+      if (brokerIds == null) {
+        const kvIds = await getBrokerLinkPrefs(chatId)
+        brokerIds = kvIds
+      }
+      // "딥링크 연결"이 된 경우에만 표시
+      const brokerIdsToShow =
+        Array.isArray(brokerIds) && brokerIds.length > 0 ? brokerIds : []
+
+      const snap = await buildTelegramSubscribedPremiumSnapshotHtml(
+        locale,
+        tickers,
+        brokerIdsToShow,
+      )
       await sendText(
         chatId,
         snap.ok ? snap.html : snap.message,
@@ -429,11 +437,20 @@ export async function POST(request: NextRequest) {
           .delete(telegramLinkTokens)
           .where(eq(telegramLinkTokens.token, tokenPayload))
 
-        const welcomeMsg =
+        const head =
           synced > 0
             ? `✅ 연결되었습니다.\n\n관심 리스트 ${synced}개 ETF에 대해 매수·매도 기준대로 알림을 보내드립니다.\n매일 평일 15:00(KST)에 조건을 확인해, 장 마감(15:30) 전에 알림을 보내드립니다.`
-            : "✅ 연결되었습니다.\n관심 리스트에 ETF를 추가한 뒤 마이페이지에서 매수·매도 기준을 설정하고 저장하면, 해당 설정대로 알림을 보내드립니다."
-        const sent = await sendPlainHeaderWithBrokerKeyboard(chatId, welcomeMsg)
+            : `✅ 연결되었습니다.\n\n관심 리스트에 ETF를 추가한 뒤 마이페이지에서 매수·매도 기준을 설정하고 저장하면, 해당 설정대로 알림을 보내드립니다.`
+        const tail =
+          `\n\n` +
+          `이 봇은 ETF 괴리율(프리미엄) 알림을 보내는 서비스입니다.\n` +
+          `전체 명령·이용 방법은 <b>/help</b> 를 눌러 보세요.\n` +
+          `알림에 넣을 네이버·토스·증권사 바로가기는 필요할 때 <b>/brokers</b> 로 설정하면 됩니다.\n\n` +
+          `💡 <b>/subscribe</b> — 봇에서 ETF 구독 추가 · <b>/premium</b> — 지금 괴리율`
+        const sent = await sendText(chatId, `${escapeHtml(head)}${tail}`, {
+          parseMode: "HTML",
+          disableWebPagePreview: true,
+        })
         if (!sent.ok) {
           console.error("[telegram:webhook] /start <token> send failed", {
             chatId,
@@ -445,11 +462,14 @@ export async function POST(request: NextRequest) {
     }
 
     const welcome =
-      "안녕하세요! ETF 괴리율 알림 봇이에요.\n\n" +
-      "전체 명령·웹 링크·구독 방법은 /help 를 눌러 보세요.\n" +
-      "알림 ETF를 추가하려면 /subscribe 를 입력해 주세요.\n\n" +
-      "💡 /premium — 지금 괴리율 스냅샷"
-    const sent = await sendText(chatId, welcome)
+      `${escapeHtml("안녕하세요! ETF 괴리율(프리미엄) 알림 봇입니다.")}\n\n` +
+      `평일 알림·구독·웹 연동 방법은 <b>/help</b> 에 정리되어 있어요.\n` +
+      `봇에서 ETF만 골라 구독하려면 <b>/subscribe</b> 를 입력해 주세요.\n\n` +
+      `💡 <b>/premium</b> — 지금 괴리율 스냅샷`
+    const sent = await sendText(chatId, welcome, {
+      parseMode: "HTML",
+      disableWebPagePreview: true,
+    })
     if (!sent.ok) {
       console.error("[telegram:webhook] /start send failed", {
         chatId,

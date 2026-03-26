@@ -38,3 +38,9 @@ alwaysApply: true
 - **PR은 반드시 생성**하고, 제목과 **설명을 직접 작성**해 넣는다. (도움만이 아니라 실제 생성 또는 복붙용 본문 제공)
 - main 직접 푸시는 하지 않는다.
 - 배포·PR 진행 시 git/PR 관련은 묻지 않고 위 순서대로 진행한다.
+
+## 5. Communication requirement (PR link)
+
+- When a PR is created or updated as part of a “deploy/PR” request, the assistant MUST include a PR link as the **last line** of the final message for that step.
+- The link MUST be formatted as a Markdown link (not bare URL), e.g. `[PR #123](https://github.com/org/repo/pull/123)`, to maximize clickability across clients.
+- If multiple PRs exist, include the single “source of truth” PR link (the one that should be merged/deployed) as the last line.
