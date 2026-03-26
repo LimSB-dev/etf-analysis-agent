@@ -1,3 +1,5 @@
+import type { Locale } from "@/lib/i18n/config"
+
 /** Telegram HTML parse_mode용 이스케이프 */
 export function escapeHtml(s: string): string {
   return s
@@ -46,6 +48,7 @@ function normalizeSixDigitCode(raw: string): string | null {
  */
 export function buildSubscriptionQuickLinksHtml(
   etfCode: string,
+  locale: Locale = "ko",
   includeAppSchemes = process.env.TELEGRAM_INCLUDE_BROKER_APP_SCHEMES === "1",
 ): string {
   const code = normalizeSixDigitCode(etfCode)
@@ -54,15 +57,22 @@ export function buildSubscriptionQuickLinksHtml(
   }
   const naver = NAVER_STOCK_MOBILE(code)
   const toss = TOSS_STOCK_ORDER(code)
+  const quickTitle = locale === "en" ? "🔗 Quick links" : "🔗 빠른 이동"
+  const naverLabel = locale === "en" ? "Naver quote" : "네이버 시세"
+  const tossLabel = locale === "en" ? "Toss Securities" : "토스증권"
+  const schemeNote =
+    locale === "en"
+      ? "📱 App deep links (behavior varies by app/version)"
+      : "📱 앱 딥링크(앱·버전마다 다를 수 있음)"
   const lines: string[] = [
     "",
-    "🔗 빠른 이동",
-    `<a href="${naver}">네이버 시세</a> · <a href="${toss}">토스증권</a>`,
+    quickTitle,
+    `<a href="${naver}">${naverLabel}</a> · <a href="${toss}">${tossLabel}</a>`,
   ]
   if (includeAppSchemes) {
     lines.push(
       "",
-      "📱 앱 딥링크(앱·버전마다 다를 수 있음)",
+      schemeNote,
     )
     for (const { label, build } of OPTIONAL_APP_SCHEMES) {
       lines.push(`${label}: ${build(code)}`)

@@ -5,30 +5,41 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { eq, sql } from "drizzle-orm"
+import { eq, inArray, sql } from "drizzle-orm"
 import { ETFS } from "@/lib/constants/etfs"
 import { db } from "@/lib/db"
 import { users, userPreferences } from "@/lib/db/schema"
 import { getEtfList, type EtfApiItemType } from "@/lib/getEtfList"
 import { ETF_OPTIONS } from "@/lib/etf-options"
+import { isValidLocale } from "@/lib/i18n/config"
+import type { Locale } from "@/lib/i18n/config"
 import {
   buildSubscriptionQuickLinksHtml,
   escapeHtml,
 } from "@/lib/broker-deep-links"
 import { listSubscriptions } from "@/lib/subscriptions"
 import { sendToChannel, sendText } from "@/lib/telegram"
+import {
+  formatTelegramKstTime,
+  formatTelegramPremiumPct,
+  getTelegramDigestHeader,
+  getTelegramDigestSignalLabel,
+  getTelegramPersonalSignalLabel,
+  getTelegramPricePremiumLine,
+  resolveTelegramLocale,
+  type TelegramPersonalSignalType,
+} from "@/lib/telegram-i18n"
 
-/** 숫자 포맷 (천 단위 구분, 소수는 premium만) */
-function formatPrice(value: number): string {
+/** 채널 브로드캐스트용 (공개 채널은 한국어 고정) */
+function formatChannelPrice(value: number): string {
   return Math.round(value).toLocaleString("ko-KR")
 }
 
-function formatPremium(value: number): string {
+function formatChannelPremium(value: number): string {
   return `${value.toFixed(2)}%`
 }
 
-/** KST 기준 시각 문자열 (예: 2025-03-10 15:00) */
-function formatKstTime(date: Date): string {
+function formatChannelKstTime(date: Date): string {
   const opts: Intl.DateTimeFormatOptions = {
     timeZone: "Asia/Seoul",
     year: "numeric",
@@ -53,7 +64,7 @@ function buildBroadcastMessage(
   etfList: EtfApiItemType[],
   calculatedAt: Date,
 ): string {
-  const kst = formatKstTime(calculatedAt)
+  const kst = formatChannelKstTime(calculatedAt)
   const lines = [`📊 ETF 괴리율 알림 (기준 시각: ${kst} KST)`, ""]
   for (const etf of etfList) {
     const signal =
@@ -64,7 +75,7 @@ function buildBroadcastMessage(
           : "⚪ HOLD"
     lines.push(
       `${etf.name}\n` +
-        `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}`,
+        `현재가 ${formatChannelPrice(etf.price)} · 괴리율 ${formatChannelPremium(etf.premium)} ${signal}`,
     )
     lines.push("")
   }
@@ -118,26 +129,48 @@ export async function GET(request: NextRequest) {
 
   // 1) KV 구독 (봇에서 ETF/기준 선택한 사용자) — 매수/매도 없어도 홀드라도 1통 전송
   const subscriptions = await listSubscriptions()
+  const uniqueChatIds = [...new Set(subscriptions.map((s) => s.chat_id))]
+  const localeByTelegramChat = new Map<number, Locale>()
+  if (uniqueChatIds.length > 0) {
+    const localeRows = await db
+      .select({ telegramId: users.telegramId, locale: users.locale })
+      .from(users)
+      .where(inArray(users.telegramId, uniqueChatIds.map(String)))
+    for (const r of localeRows) {
+      const id = Number.parseInt(r.telegramId ?? "", 10)
+      if (Number.isFinite(id) && r.locale && isValidLocale(r.locale)) {
+        localeByTelegramChat.set(id, r.locale)
+      }
+    }
+  }
+
   for (const sub of subscriptions) {
     const etf = etfByTicker.get(sub.etf_ticker)
     if (!etf) {
       continue
     }
+    const locale =
+      localeByTelegramChat.get(sub.chat_id) ??
+      resolveTelegramLocale(sub.locale)
     const buyTrigger = etf.premium <= sub.premium_threshold
     const sellTrigger =
       sub.sell_threshold != null && etf.premium >= sub.sell_threshold
-    const signal =
-      buyTrigger && sellTrigger
-        ? "🟢 매수 / 🔴 매도"
-        : buyTrigger
-          ? "🟢 매수"
-          : sellTrigger
-            ? "🔴 매도"
-            : "⚪ HOLD"
+    let personalSignal: TelegramPersonalSignalType
+    if (buyTrigger && sellTrigger) {
+      personalSignal = "buy_and_sell"
+    } else if (buyTrigger) {
+      personalSignal = "buy"
+    } else if (sellTrigger) {
+      personalSignal = "sell"
+    } else {
+      personalSignal = "hold"
+    }
+    const signal = getTelegramPersonalSignalLabel(personalSignal, locale)
+    const premStr = formatTelegramPremiumPct(etf.premium)
     const line =
       `${escapeHtml(etf.name)}\n` +
-      `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}` +
-      buildSubscriptionQuickLinksHtml(etf.ticker)
+      `${getTelegramPricePremiumLine(etf.price, premStr, locale)} ${signal}` +
+      buildSubscriptionQuickLinksHtml(etf.ticker, locale)
     const res = await sendText(sub.chat_id, line, {
       parseMode: "HTML",
       disableWebPagePreview: true,
@@ -152,23 +185,22 @@ export async function GET(request: NextRequest) {
     .select({
       telegramId: users.telegramId,
       preferences: userPreferences.preferences,
+      locale: users.locale,
     })
     .from(users)
     .innerJoin(userPreferences, eq(users.id, userPreferences.userId))
     .where(sql`${users.telegramId} is not null`)
 
   // 관심 ETF 일괄 요약 1통 전송
-  const kstTimeStr = formatKstTime(calculatedAt)
   for (const row of linkedUsers) {
     const chatId = Number.parseInt(row.telegramId ?? "", 10)
     if (!Number.isFinite(chatId)) {
       continue
     }
+    const locale = resolveTelegramLocale(row.locale)
+    const kstTimeStr = formatTelegramKstTime(calculatedAt, locale)
     const prefs = row.preferences ?? {}
-    const digestLines: string[] = [
-      `📊 관심 ETF 요약 (기준 시각: ${kstTimeStr} KST)`,
-      "",
-    ]
+    const digestLines: string[] = [getTelegramDigestHeader(kstTimeStr, locale), ""]
     for (const [etfId, p] of Object.entries(prefs)) {
       if (!p || typeof p.buyPremiumThreshold !== "number") {
         continue
@@ -181,16 +213,12 @@ export async function GET(request: NextRequest) {
       if (!etf) {
         continue
       }
-      const signal =
-        etf.signal === "BUY"
-          ? "🟢 BUY"
-          : etf.signal === "SELL"
-            ? "🔴 SELL"
-            : "⚪ HOLD"
+      const signal = getTelegramDigestSignalLabel(etf.signal, locale)
+      const premStr = formatTelegramPremiumPct(etf.premium)
       digestLines.push(
         `${escapeHtml(etf.name)}\n` +
-          `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}` +
-          buildSubscriptionQuickLinksHtml(etf.ticker),
+          `${getTelegramPricePremiumLine(etf.price, premStr, locale)} ${signal}` +
+          buildSubscriptionQuickLinksHtml(etf.ticker, locale),
       )
       digestLines.push("")
     }

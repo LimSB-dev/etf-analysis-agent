@@ -15,6 +15,7 @@ import { ETFS } from "@/lib/constants/etfs"
 import { ETF_OPTIONS } from "@/lib/etf-options"
 import { db } from "@/lib/db"
 import { userPreferences, telegramLinkTokens, users } from "@/lib/db/schema"
+import { isValidLocale } from "@/lib/i18n/config"
 import { addSubscription } from "@/lib/subscriptions"
 import {
   answerCallbackQuery,
@@ -45,6 +46,30 @@ interface TelegramUpdateType {
     message?: { chat: { id: number } }
     data?: string
   }
+}
+
+async function getDbLocaleForTelegramChat(
+  chatId: number,
+): Promise<string | undefined> {
+  const rows = await db
+    .select({ locale: users.locale })
+    .from(users)
+    .where(eq(users.telegramId, String(chatId)))
+    .limit(1)
+  const l = rows[0]?.locale
+  return l && isValidLocale(l) ? l : undefined
+}
+
+async function getDbLocaleForUserId(
+  userId: string,
+): Promise<string | undefined> {
+  const rows = await db
+    .select({ locale: users.locale })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+  const l = rows[0]?.locale
+  return l && isValidLocale(l) ? l : undefined
 }
 
 function getChatId(update: TelegramUpdateType): number | null {
@@ -137,6 +162,7 @@ export async function POST(request: NextRequest) {
           .then((rows) => rows[0] ?? null)
 
         const prefs = prefRow?.preferences ?? {}
+        const linkedLocale = await getDbLocaleForUserId(linkRow.userId)
         let synced = 0
         for (const [etfId, p] of Object.entries(prefs)) {
           const ticker = ETF_OPTIONS.find((o) => o.id === etfId)?.code ?? null
@@ -150,6 +176,7 @@ export async function POST(request: NextRequest) {
             etf_ticker: ticker,
             premium_threshold: buy,
             sell_threshold: sell,
+            ...(linkedLocale ? { locale: linkedLocale } : {}),
           })
           if (added) {
             synced += 1
@@ -224,10 +251,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    const localeFromDb = await getDbLocaleForTelegramChat(chatId)
     const added = await addSubscription({
       chat_id: chatId,
       etf_ticker: etf.ticker,
       premium_threshold: threshold,
+      ...(localeFromDb ? { locale: localeFromDb } : {}),
     })
     if (!added) {
       await sendText(chatId, "구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.")
@@ -262,11 +291,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const localeFromDb = await getDbLocaleForTelegramChat(chatId)
     const added = await addSubscription({
       chat_id: chatId,
       etf_ticker: etf.ticker,
       premium_threshold: buyThreshold,
       sell_threshold: sellThreshold,
+      ...(localeFromDb ? { locale: localeFromDb } : {}),
     })
     if (!added) {
       await sendText(chatId, "구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.")
