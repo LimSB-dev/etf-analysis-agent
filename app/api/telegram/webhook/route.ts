@@ -5,6 +5,8 @@
  * - ETF 선택 시: 프리미엄 기준 선택 Keyboard 전송
  * - 프리미엄 선택 시: 구독 저장 후 완료 메시지 + 같은 메시지에 증권사 딥링크 선택 키보드
  * - /brokers (또는 /증권사): 증권사 선택 화면만 다시 표시
+ * - /help (또는 /도움): 사용 가능한 기능 안내
+ * - /premium · /괴리율 · /now · /실시간: 현재 시점 괴리율·신호 스냅샷(캐시)
  *
  * Vercel 배포 후 Telegram에 Webhook URL 설정 필요:
  * https://api.telegram.org/bot<TOKEN>/setWebhook?url=<YOUR_VERCEL_URL>/api/telegram/webhook
@@ -25,7 +27,14 @@ import {
   setPendingBrokerSel,
 } from "@/lib/broker-link-prefs"
 import { isValidLocale } from "@/lib/i18n/config"
+import { SITE_URL, TELEGRAM_CHANNEL_URL } from "@/lib/site-config"
 import { addSubscription } from "@/lib/subscriptions"
+import {
+  buildTelegramHelpHtml,
+  buildTelegramPremiumSnapshotHtml,
+  normalizeTelegramCommand,
+} from "@/lib/telegram-help"
+import { resolveTelegramLocale } from "@/lib/telegram-i18n"
 import {
   brokerPromptHtml,
   buildBrokerPickKeyboard,
@@ -213,15 +222,45 @@ export async function POST(request: NextRequest) {
   }
 
   const plainMessageText = update.message?.text?.trim() ?? ""
-  if (
-    update.message &&
-    !update.callback_query &&
-    (plainMessageText === "/brokers" ||
-      plainMessageText === "/증권사" ||
-      plainMessageText === "/broker")
-  ) {
-    await sendBrokerPickerPrompt(chatId)
-    return NextResponse.json({ ok: true })
+  const messageCommand = normalizeTelegramCommand(plainMessageText)
+  if (update.message && !update.callback_query) {
+    if (
+      messageCommand === "/brokers" ||
+      messageCommand === "/증권사" ||
+      messageCommand === "/broker"
+    ) {
+      await sendBrokerPickerPrompt(chatId)
+      return NextResponse.json({ ok: true })
+    }
+    if (messageCommand === "/help" || messageCommand === "/도움") {
+      const locRaw = await getDbLocaleForTelegramChat(chatId)
+      const locale = resolveTelegramLocale(locRaw)
+      const html = buildTelegramHelpHtml(locale, SITE_URL, TELEGRAM_CHANNEL_URL)
+      await sendText(chatId, html, {
+        parseMode: "HTML",
+        disableWebPagePreview: true,
+      })
+      return NextResponse.json({ ok: true })
+    }
+    if (
+      messageCommand === "/premium" ||
+      messageCommand === "/괴리율" ||
+      messageCommand === "/now" ||
+      messageCommand === "/실시간"
+    ) {
+      const locRaw = await getDbLocaleForTelegramChat(chatId)
+      const locale = resolveTelegramLocale(locRaw)
+      const snap = await buildTelegramPremiumSnapshotHtml(locale)
+      if (snap.ok) {
+        await sendText(chatId, snap.html, {
+          parseMode: "HTML",
+          disableWebPagePreview: true,
+        })
+      } else {
+        await sendText(chatId, snap.message)
+      }
+      return NextResponse.json({ ok: true })
+    }
   }
 
   // /start 또는 /start <token> (개인 채팅만; 채널 포스트는 토큰 없음)
@@ -296,7 +335,7 @@ export async function POST(request: NextRequest) {
 
     const sent = await sendMessageWithKeyboard(
       chatId,
-      "알림 받을 ETF를 선택하세요.",
+      "알림 받을 ETF를 선택하세요.\n\n💡 /help — 전체 기능 안내 · /premium — 지금 괴리율",
       buildEtfKeyboard(),
     )
     return NextResponse.json({ ok: sent.ok })
@@ -312,7 +351,7 @@ export async function POST(request: NextRequest) {
     await answerCallbackQuery(callbackQueryId)
   }
 
-  // 증권사 딥링크 0~3개 다중 선택
+  // 빠른 이동(네이버·토스·증권사 앱) 최대 5개까지 다중 선택
   if (data.startsWith("brk:")) {
     const msgId = update.callback_query?.message?.message_id
     if (msgId == null) {
@@ -343,8 +382,8 @@ export async function POST(request: NextRequest) {
       await sendText(
         chatId,
         loc === "en"
-          ? "✅ Saved. Alerts will only include Naver and Toss links."
-          : "✅ 저장했습니다. 네이버·토스 링크만 알림에 포함됩니다.",
+          ? "✅ Saved. No quick links will be added to alerts."
+          : "✅ 저장했습니다. 빠른 이동 링크는 알림에 넣지 않습니다.",
       )
       return NextResponse.json({ ok: true })
     }

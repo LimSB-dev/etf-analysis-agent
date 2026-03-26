@@ -1,4 +1,8 @@
-import { BROKER_DEEP_LINK_IDS, BROKER_DEEP_LINK_OPTIONS } from "@/lib/broker-deep-links"
+import {
+  BROKER_DEEP_LINK_IDS,
+  BROKER_DEEP_LINK_OPTIONS,
+  MAX_QUICK_LINK_SELECTIONS,
+} from "@/lib/broker-deep-links"
 import type { InlineKeyboardButtonType } from "@/lib/telegram"
 
 export type TelegramBrokerUiLocaleType = "ko" | "en"
@@ -8,18 +12,18 @@ export function brokerPromptHtml(
   locale: TelegramBrokerUiLocaleType,
 ): string {
   const n = selected.length
+  const max = MAX_QUICK_LINK_SELECTIONS
   if (locale === "en") {
     return (
-      `📱 <b>Broker app deep links</b>\n` +
-      `Choose up to <b>3</b> brokers (optional). Naver &amp; Toss links are always included.\n` +
-      `Selected: <b>${n}/3</b>`
+      `📱 <b>Quick links in alerts</b>\n` +
+      `Pick up to <b>${max}</b> links: Naver, Toss, and broker app schemes (all optional).\n` +
+      `Selected: <b>${n}/${max}</b>`
     )
   }
   return (
-    `📱 <b>증권사 앱 딥링크</b>\n` +
-    `알림에 넣을 증권사를 <b>최대 3개</b>까지 선택하세요.\n` +
-    `(네이버·토스 링크는 항상 포함됩니다)\n` +
-    `선택: <b>${n}/3</b>`
+    `📱 <b>알림 빠른 이동</b>\n` +
+    `네이버·토스·증권사 앱 링크를 <b>최대 ${max}개</b>까지 골라 넣을 수 있어요.\n` +
+    `선택: <b>${n}/${max}</b>`
   )
 }
 
@@ -48,7 +52,7 @@ export function buildBrokerPickKeyboard(
   }
   const doneLabel = locale === "en" ? "✅ Done" : "✅ 완료"
   const skipLabel =
-    locale === "en" ? "⏭ Skip (app links off)" : "⏭ 건너뛰기(앱 링크 없음)"
+    locale === "en" ? "⏭ Skip (no quick links)" : "⏭ 건너뛰기(링크 없음)"
   rows.push([
     { text: doneLabel, callback_data: "brk:done" },
     { text: skipLabel, callback_data: "brk:skip" },
@@ -63,7 +67,7 @@ export function toggleBrokerSelection(selected: string[], id: string): string[] 
   const set = new Set(selected)
   if (set.has(id)) {
     set.delete(id)
-  } else if (set.size < 3) {
+  } else if (set.size < MAX_QUICK_LINK_SELECTIONS) {
     set.add(id)
   }
   return normalizeBrokerIdsArray([...set])
@@ -71,5 +75,8 @@ export function toggleBrokerSelection(selected: string[], id: string): string[] 
 
 function normalizeBrokerIdsArray(ids: string[]): string[] {
   const allowed = new Set(BROKER_DEEP_LINK_IDS)
-  return [...new Set(ids.filter((x) => allowed.has(x)))].slice(0, 3)
+  return [...new Set(ids.filter((x) => allowed.has(x)))].slice(
+    0,
+    MAX_QUICK_LINK_SELECTIONS,
+  )
 }

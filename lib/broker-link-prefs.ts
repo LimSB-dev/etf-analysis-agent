@@ -1,11 +1,11 @@
 /**
- * 텔레그램 chat_id별 증권사 딥링크 선택(0~3개) — KV 저장
- * - 키 없음(null): 기존 동작 — TELEGRAM_INCLUDE_BROKER_APP_SCHEMES 환경 변수 따름
- * - 빈 배열 또는 1~3개 id: 해당 증권사만 알림에 포함
+ * 텔레그램 chat_id별 빠른 이동 링크 선택 — KV 저장
+ * - 키 없음(null): 레거시 — TELEGRAM_INCLUDE_BROKER_APP_SCHEMES 환경 변수 따름
+ * - 빈 배열 또는 id 배열: 해당 링크만(네이버·토스·증권사, 최대 MAX_QUICK_LINK_SELECTIONS개)
  */
 
 import { kv } from "@/lib/cache"
-import { BROKER_DEEP_LINK_IDS } from "@/lib/broker-deep-links"
+import { BROKER_DEEP_LINK_IDS, MAX_QUICK_LINK_SELECTIONS } from "@/lib/broker-deep-links"
 
 const PREFIX = "telegram:broker_prefs:"
 const ALLOWED_IDS = new Set<string>(BROKER_DEEP_LINK_IDS)
@@ -33,14 +33,17 @@ export async function getBrokerLinkPrefs(
     const ids = parsed.filter(
       (x): x is string => typeof x === "string" && ALLOWED_IDS.has(x),
     )
-    return [...new Set(ids)].slice(0, 3)
+    return [...new Set(ids)].slice(0, MAX_QUICK_LINK_SELECTIONS)
   } catch {
     return null
   }
 }
 
 export function normalizeBrokerIds(ids: string[]): string[] {
-  return [...new Set(ids.filter((id) => ALLOWED_IDS.has(id)))].slice(0, 3)
+  return [...new Set(ids.filter((id) => ALLOWED_IDS.has(id)))].slice(
+    0,
+    MAX_QUICK_LINK_SELECTIONS,
+  )
 }
 
 /** 명시적 저장(빈 배열 가능). 성공 시 이후 get은 배열만 반환 */

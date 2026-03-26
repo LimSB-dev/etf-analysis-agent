@@ -34,6 +34,10 @@ export async function ensureAuthTables(): Promise<void> {
       updated_at timestamptz NOT NULL DEFAULT now()
     )
   `;
+  await sql`
+    ALTER TABLE user_preferences
+    ADD COLUMN IF NOT EXISTS telegram_broker_link_ids jsonb
+  `;
 
   await sql`
     CREATE TABLE IF NOT EXISTS oauth_accounts (

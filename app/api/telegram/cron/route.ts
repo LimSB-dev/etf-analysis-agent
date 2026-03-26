@@ -17,7 +17,7 @@ import {
   buildSubscriptionQuickLinksHtml,
   escapeHtml,
 } from "@/lib/broker-deep-links"
-import { getBrokerLinkPrefs } from "@/lib/broker-link-prefs"
+import { getBrokerLinkPrefs, normalizeBrokerIds } from "@/lib/broker-link-prefs"
 import { listSubscriptions } from "@/lib/subscriptions"
 import { sendToChannel, sendText } from "@/lib/telegram"
 import {
@@ -196,6 +196,7 @@ export async function GET(request: NextRequest) {
       telegramId: users.telegramId,
       preferences: userPreferences.preferences,
       locale: users.locale,
+      telegramBrokerLinkIds: userPreferences.telegramBrokerLinkIds,
     })
     .from(users)
     .innerJoin(userPreferences, eq(users.id, userPreferences.userId))
@@ -209,7 +210,13 @@ export async function GET(request: NextRequest) {
     }
     const locale = resolveTelegramLocale(row.locale)
     const kstTimeStr = formatTelegramKstTime(calculatedAt, locale)
-    const brokerPrefsDigest = await getBrokerLinkPrefs(chatId)
+    const dbBrokers = row.telegramBrokerLinkIds
+    let brokerPrefsDigest: string[] | null
+    if (Array.isArray(dbBrokers) && dbBrokers.every((x) => typeof x === "string")) {
+      brokerPrefsDigest = normalizeBrokerIds(dbBrokers)
+    } else {
+      brokerPrefsDigest = await getBrokerLinkPrefs(chatId)
+    }
     const prefs = row.preferences ?? {}
     const digestLines: string[] = [getTelegramDigestHeader(kstTimeStr, locale), ""]
     for (const [etfId, p] of Object.entries(prefs)) {

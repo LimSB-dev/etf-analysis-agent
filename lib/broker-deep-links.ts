@@ -8,12 +8,6 @@ export function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
 }
 
-const NAVER_STOCK_MOBILE = (code: string) =>
-  `https://m.stock.naver.com/domestic/stock/${code}/total`
-
-const TOSS_STOCK_ORDER = (code: string) =>
-  `https://tossinvest.com/stocks/A${code}/order`
-
 export type BrokerDeepLinkOptionType = {
   id: string
   labelKo: string
@@ -21,8 +15,23 @@ export type BrokerDeepLinkOptionType = {
   build: (code: string) => string
 }
 
-/** 알림에 넣을 수 있는 증권사 앱 스킴(최대 3개 선택) */
+/** 네이버·토스·증권사 앱 합산 최대 선택 개수 */
+export const MAX_QUICK_LINK_SELECTIONS = 5
+
+/** 알림 빠른 이동(네이버·토스·증권사 앱, 최대 MAX_QUICK_LINK_SELECTIONS개) */
 export const BROKER_DEEP_LINK_OPTIONS: BrokerDeepLinkOptionType[] = [
+  {
+    id: "naver",
+    labelKo: "네이버 시세",
+    labelEn: "Naver quote",
+    build: (c) => `https://m.stock.naver.com/domestic/stock/${c}/total`,
+  },
+  {
+    id: "toss",
+    labelKo: "토스증권",
+    labelEn: "Toss Securities",
+    build: (c) => `https://tossinvest.com/stocks/A${c}/order`,
+  },
   {
     id: "mirae",
     labelKo: "미래에셋",
@@ -89,9 +98,9 @@ function normalizeSixDigitCode(raw: string): string | null {
 
 /**
  * @param selectedBrokerIds
- *   - null: 레거시 — TELEGRAM_INCLUDE_BROKER_APP_SCHEMES=1 이면 전 증권사 스킴 포함
- *   - []: 네이버·토스만 (앱 스킴 없음)
- *   - 1~3개 id: 해당 증권사만
+ *   - null: 레거시 — TELEGRAM_INCLUDE_BROKER_APP_SCHEMES=1 이면 전 항목(네이버·토스·전 증권사) 표시, 아니면 빈 문자열
+ *   - []: 빠른 이동 블록 없음
+ *   - 1~MAX_QUICK_LINK_SELECTIONS개 id: 선택한 링크만(네이버·토스·증권사 id 혼합)
  */
 export function buildSubscriptionQuickLinksHtml(
   etfCode: string,
@@ -102,50 +111,55 @@ export function buildSubscriptionQuickLinksHtml(
   if (!code) {
     return ""
   }
-  const naver = NAVER_STOCK_MOBILE(code)
-  const toss = TOSS_STOCK_ORDER(code)
   const quickTitle = locale === "en" ? "🔗 Quick links" : "🔗 빠른 이동"
-  const naverLabel = locale === "en" ? "Naver quote" : "네이버 시세"
-  const tossLabel = locale === "en" ? "Toss Securities" : "토스증권"
   const schemeNote =
     locale === "en"
       ? "📱 App deep links (behavior varies by app/version)"
       : "📱 앱 딥링크(앱·버전마다 다를 수 있음)"
 
-  const lines: string[] = [
-    "",
-    quickTitle,
-    `<a href="${naver}">${naverLabel}</a> · <a href="${toss}">${tossLabel}</a>`,
-  ]
-
-  let includeSchemes = false
-  let schemesToShow: BrokerDeepLinkOptionType[] = []
+  let ordered: BrokerDeepLinkOptionType[] = []
 
   if (selectedBrokerIds === null) {
-    includeSchemes = process.env.TELEGRAM_INCLUDE_BROKER_APP_SCHEMES === "1"
-    if (includeSchemes) {
-      schemesToShow = [...BROKER_DEEP_LINK_OPTIONS]
+    const includeAll = process.env.TELEGRAM_INCLUDE_BROKER_APP_SCHEMES === "1"
+    if (!includeAll) {
+      return ""
     }
+    ordered = [...BROKER_DEEP_LINK_OPTIONS]
   } else {
     const allowed = new Set(BROKER_DEEP_LINK_IDS)
     const picked = [...new Set(selectedBrokerIds)]
       .filter((id) => allowed.has(id))
-      .slice(0, 3)
-    if (picked.length > 0) {
-      includeSchemes = true
-      schemesToShow = picked
-        .map((id) => getBrokerOptionById(id))
-        .filter((x): x is BrokerDeepLinkOptionType => x != null)
+      .slice(0, MAX_QUICK_LINK_SELECTIONS)
+    ordered = picked
+      .map((id) => getBrokerOptionById(id))
+      .filter((x): x is BrokerDeepLinkOptionType => x != null)
+  }
+
+  if (ordered.length === 0) {
+    return ""
+  }
+
+  const lines: string[] = ["", quickTitle]
+  const webParts: string[] = []
+  const appParts: string[] = []
+
+  for (const o of ordered) {
+    const label = locale === "en" ? o.labelEn : o.labelKo
+    const url = o.build(code)
+    if (o.id === "naver" || o.id === "toss") {
+      webParts.push(
+        `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`,
+      )
+    } else {
+      appParts.push(`${escapeHtml(label)}: ${url}`)
     }
   }
 
-  if (includeSchemes && schemesToShow.length > 0) {
-    lines.push("", schemeNote)
-    const label = (o: BrokerDeepLinkOptionType) =>
-      locale === "en" ? o.labelEn : o.labelKo
-    for (const o of schemesToShow) {
-      lines.push(`${label(o)}: ${o.build(code)}`)
-    }
+  if (webParts.length > 0) {
+    lines.push(webParts.join(" · "))
+  }
+  if (appParts.length > 0) {
+    lines.push("", schemeNote, ...appParts)
   }
 
   return lines.join("\n")

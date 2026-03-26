@@ -164,4 +164,14 @@ test.describe("마이페이지 인증 (텔레그램 구독 연결됨)", () => {
     });
     await expect(unlinkButton).toBeVisible();
   });
+
+  test("텔레그램 연결 시 증권사 딥링크를 선택하고 저장할 수 있다", async ({
+    page,
+  }) => {
+    await page.goto("/mypage", { waitUntil: "domcontentloaded" });
+    await waitForMypageContent(page);
+    await page.getByTestId("test-mypage-broker-mirae").click();
+    await page.getByRole("button", { name: t.mypage.save }).click();
+    await expect(page.getByRole("status")).toHaveText(t.mypage.saved);
+  });
 });

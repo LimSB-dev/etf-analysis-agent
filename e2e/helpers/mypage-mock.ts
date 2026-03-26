@@ -26,9 +26,14 @@ export async function setupMypageMocks(
     preferences?: MypagePreferencesMockType;
     telegramLinked?: boolean;
     locale?: string | null;
+    telegramBrokerLinkIds?: string[] | null;
   } = {},
 ): Promise<void> {
-  const { preferences = {}, telegramLinked = false } = options;
+  const { preferences: seedPrefs = {}, telegramLinked = false } = options;
+
+  let preferences: MypagePreferencesMockType = { ...seedPrefs };
+  let telegramBrokerLinkIds: string[] | null =
+    options.telegramBrokerLinkIds ?? null;
 
   // RegExp로 URL 매칭 (절대/상대 경로, req.url 불일치 방지)
   await page.route(/\/api\/auth\/session\/?(\?.*)?$/, (route) => {
@@ -44,7 +49,12 @@ export async function setupMypageMocks(
 
   await page.route(/\/api\/mypage\/preferences\/?(\?.*)?$/, (route) => {
     const method = route.request().method();
-    const body = { preferences, telegramLinked, locale: options.locale ?? null };
+    const body = {
+      preferences,
+      telegramLinked,
+      locale: options.locale ?? null,
+      telegramBrokerLinkIds,
+    };
     if (method === "GET") {
       return route.fulfill({
         status: 200,
@@ -53,10 +63,29 @@ export async function setupMypageMocks(
       });
     }
     if (method === "PATCH") {
+      try {
+        const raw = route.request().postDataJSON() as {
+          preferences?: MypagePreferencesMockType;
+          telegramBrokerLinkIds?: string[];
+        };
+        if (raw.preferences != null) {
+          preferences = { ...raw.preferences };
+        }
+        if (raw.telegramBrokerLinkIds !== undefined) {
+          telegramBrokerLinkIds = [...raw.telegramBrokerLinkIds];
+        }
+      } catch {
+        // ignore
+      }
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          preferences,
+          telegramLinked,
+          locale: options.locale ?? null,
+          telegramBrokerLinkIds,
+        }),
       });
     }
     return route.continue();
