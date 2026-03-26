@@ -11,6 +11,10 @@ import { db } from "@/lib/db"
 import { users, userPreferences } from "@/lib/db/schema"
 import { getEtfList, type EtfApiItemType } from "@/lib/getEtfList"
 import { ETF_OPTIONS } from "@/lib/etf-options"
+import {
+  buildSubscriptionQuickLinksHtml,
+  escapeHtml,
+} from "@/lib/broker-deep-links"
 import { listSubscriptions } from "@/lib/subscriptions"
 import { sendToChannel, sendText } from "@/lib/telegram"
 
@@ -131,9 +135,13 @@ export async function GET(request: NextRequest) {
             ? "🔴 매도"
             : "⚪ HOLD"
     const line =
-      `${etf.name}\n` +
-      `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}`
-    const res = await sendText(sub.chat_id, line)
+      `${escapeHtml(etf.name)}\n` +
+      `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}` +
+      buildSubscriptionQuickLinksHtml(etf.ticker)
+    const res = await sendText(sub.chat_id, line, {
+      parseMode: "HTML",
+      disableWebPagePreview: true,
+    })
     if (res.ok) {
       personalSent += 1
     }
@@ -180,8 +188,9 @@ export async function GET(request: NextRequest) {
             ? "🔴 SELL"
             : "⚪ HOLD"
       digestLines.push(
-        `${etf.name}\n` +
-          `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}`,
+        `${escapeHtml(etf.name)}\n` +
+          `현재가 ${formatPrice(etf.price)} · 괴리율 ${formatPremium(etf.premium)} ${signal}` +
+          buildSubscriptionQuickLinksHtml(etf.ticker),
       )
       digestLines.push("")
     }
@@ -189,7 +198,10 @@ export async function GET(request: NextRequest) {
       continue
     }
     const digestText = digestLines.join("\n").trimEnd()
-    const res = await sendText(chatId, digestText)
+    const res = await sendText(chatId, digestText, {
+      parseMode: "HTML",
+      disableWebPagePreview: true,
+    })
     if (res.ok) {
       digestSent += 1
     }

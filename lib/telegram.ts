@@ -18,6 +18,7 @@ export interface SendMessageOptionsType {
   chat_id: number
   text: string
   parse_mode?: "HTML" | "Markdown" | "MarkdownV2"
+  disable_web_page_preview?: boolean
   reply_markup?: {
     inline_keyboard: InlineKeyboardButtonType[][]
   }
@@ -108,18 +109,29 @@ export async function sendToChannel(
   return sendText(getChannelId(), text)
 }
 
+export type SendTextOptionsType = {
+  parseMode?: "HTML" | "Markdown" | "MarkdownV2"
+  disableWebPagePreview?: boolean
+}
+
 /**
  * 단순 텍스트 메시지 전송 (키보드 없음)
  */
 export async function sendText(
   chatId: number,
   text: string,
-  parseMode: "HTML" | "Markdown" | "MarkdownV2" = "HTML",
+  parseModeOrOptions: "HTML" | "Markdown" | "MarkdownV2" | SendTextOptionsType = "HTML",
 ): Promise<{ ok: boolean; error?: string }> {
+  const opts: SendTextOptionsType =
+    typeof parseModeOrOptions === "string"
+      ? { parseMode: parseModeOrOptions }
+      : parseModeOrOptions
+  const parseMode = opts.parseMode ?? "HTML"
   return sendTelegramMessage({
     chat_id: chatId,
     text,
     parse_mode: parseMode,
+    disable_web_page_preview: opts.disableWebPagePreview,
   })
 }
 
