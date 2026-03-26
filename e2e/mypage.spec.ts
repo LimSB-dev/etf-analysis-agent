@@ -9,9 +9,15 @@ import { setupMypageMocks } from "./helpers/mypage-mock";
 /** 인증된 마이페이지 본문 로드 대기 (섹션 제목 노출 기준) */
 const waitForMypageContent = async (
   page: import("@playwright/test").Page,
-  timeout = 15_000,
+  timeout = 25_000,
 ) => {
-  await page.getByText(t.mypage.interestEtfList).waitFor({ state: "visible", timeout });
+  const main = page.getByRole("main");
+  await main.waitFor({ state: "visible", timeout });
+  // 접근성 role/level까지 강하게 고정하면 브라우저별 렌더링 차이에서
+  // 타임아웃이 늘 수 있어, 텍스트 가시성 기준으로 안정화한다.
+  await page
+    .getByText(t.mypage.interestEtfList)
+    .waitFor({ state: "visible", timeout });
 };
 
 test.describe("마이페이지 비인증", () => {

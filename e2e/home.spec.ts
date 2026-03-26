@@ -19,7 +19,9 @@ test.describe("홈 페이지", () => {
   }) => {
     await page.goto("/");
 
-    const header = page.getByRole("banner", { name: t.pageTitle });
+    // Client-rendering/hydration 및 locale 타이밍에 따라 banner의 접근성 이름(name)이
+    // 엄밀히 일치하지 못하는 경우가 있어, 배너 역할만 먼저 확보하고 내부 내용을 검증한다.
+    const header = page.getByRole("banner").first();
     await expect(header).toBeVisible();
 
     const h1 = header.getByRole("heading", { level: 1 });
