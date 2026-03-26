@@ -24,13 +24,13 @@ export const BROKER_DEEP_LINK_OPTIONS: BrokerDeepLinkOptionType[] = [
     id: "naver",
     labelKo: "네이버 시세",
     labelEn: "Naver quote",
-    build: (c) => `https://m.stock.naver.com/domestic/stock/${c}/total`,
+    build: (c) => `naversearchapp://stock/${c}`,
   },
   {
     id: "toss",
     labelKo: "토스증권",
     labelEn: "Toss Securities",
-    build: (c) => `https://tossinvest.com/stocks/A${c}/order`,
+    build: (c) => `tossinvest://stocks/A${c}/order`,
   },
   {
     id: "mirae",
