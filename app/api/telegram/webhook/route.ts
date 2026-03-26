@@ -28,10 +28,11 @@ import {
 } from "@/lib/broker-link-prefs"
 import { isValidLocale } from "@/lib/i18n/config"
 import { SITE_URL, TELEGRAM_CHANNEL_URL } from "@/lib/site-config"
-import { addSubscription } from "@/lib/subscriptions"
+import { addSubscription, listSubscriptions } from "@/lib/subscriptions"
 import {
   buildTelegramHelpHtml,
   buildTelegramPremiumSnapshotHtml,
+  buildTelegramSubscribedPremiumSnapshotHtml,
   normalizeTelegramCommand,
 } from "@/lib/telegram-help"
 import { resolveTelegramLocale } from "@/lib/telegram-i18n"
@@ -208,6 +209,14 @@ function buildSellThresholdKeyboard(
   return [row1, row2]
 }
 
+function buildSubscribedEtfKeyboard(tickers: string[]): InlineKeyboardButtonType[][] {
+  const uniq = [...new Set(tickers)]
+  return uniq.map((t) => {
+    const name = ETFS.find((e) => e.ticker === t)?.name ?? t
+    return [{ text: name, callback_data: `subetf:${t}` }]
+  })
+}
+
 export async function POST(request: NextRequest) {
   let update: TelegramUpdateType
   try {
@@ -224,6 +233,21 @@ export async function POST(request: NextRequest) {
   const plainMessageText = update.message?.text?.trim() ?? ""
   const messageCommand = normalizeTelegramCommand(plainMessageText)
   if (update.message && !update.callback_query) {
+    if (
+      messageCommand === "/commands" ||
+      messageCommand === "/명령어" ||
+      messageCommand === "/menu"
+    ) {
+      const locRaw = await getDbLocaleForTelegramChat(chatId)
+      const locale = resolveTelegramLocale(locRaw)
+      const html = buildTelegramHelpHtml(locale, SITE_URL, TELEGRAM_CHANNEL_URL)
+      await sendText(chatId, html, {
+        parseMode: "HTML",
+        disableWebPagePreview: true,
+      })
+      return NextResponse.json({ ok: true })
+    }
+
     if (
       messageCommand === "/brokers" ||
       messageCommand === "/증권사" ||
@@ -242,6 +266,56 @@ export async function POST(request: NextRequest) {
       })
       return NextResponse.json({ ok: true })
     }
+
+    if (
+      messageCommand === "/subs" ||
+      messageCommand === "/my" ||
+      messageCommand === "/구독" ||
+      messageCommand === "/내구독"
+    ) {
+      const locRaw = await getDbLocaleForTelegramChat(chatId)
+      const locale = resolveTelegramLocale(locRaw)
+      const all = await listSubscriptions()
+      const mine = all.filter((s) => s.chat_id === chatId)
+      const tickers = mine.map((s) => s.etf_ticker)
+      const snap = await buildTelegramSubscribedPremiumSnapshotHtml(locale, tickers)
+      await sendText(
+        chatId,
+        snap.ok ? snap.html : snap.message,
+        snap.ok
+          ? { parseMode: "HTML", disableWebPagePreview: true }
+          : "HTML",
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    if (
+      messageCommand === "/edit" ||
+      messageCommand === "/구독수정" ||
+      messageCommand === "/수정" ||
+      messageCommand === "/update"
+    ) {
+      const all = await listSubscriptions()
+      const mine = all.filter((s) => s.chat_id === chatId)
+      const tickers = [...new Set(mine.map((s) => s.etf_ticker))]
+      if (tickers.length === 0) {
+        await sendText(chatId, "아직 구독한 ETF가 없습니다. /start 로 구독을 시작해 주세요.")
+        return NextResponse.json({ ok: true })
+      }
+      const sent = await sendMessageWithKeyboard(
+        chatId,
+        "수정할 ETF를 선택하세요.\n(선택 후 매수·매도 기준을 다시 고를 수 있어요.)",
+        buildSubscribedEtfKeyboard(tickers),
+      )
+      if (!sent.ok) {
+        console.error("[telegram:webhook] /edit send failed", {
+          chatId,
+          error: sent.error ?? "unknown",
+        })
+      }
+      return NextResponse.json({ ok: true })
+    }
+
     if (
       messageCommand === "/premium" ||
       messageCommand === "/괴리율" ||
@@ -439,6 +513,29 @@ export async function POST(request: NextRequest) {
     )
     if (!sent.ok) {
       console.error("[telegram:webhook] etf pick send failed", {
+        chatId,
+        error: sent.error ?? "unknown",
+        ticker,
+      })
+    }
+    return NextResponse.json({ ok: sent.ok })
+  }
+
+  // 구독 ETF 선택(수정): subetf:{ticker}
+  if (data.startsWith("subetf:")) {
+    const ticker = data.slice(7)
+    const etf = ETFS.find((e) => e.ticker === ticker)
+    if (!etf) {
+      await sendText(chatId, "선택한 ETF를 찾을 수 없습니다. /subs 로 구독을 확인해 주세요.")
+      return NextResponse.json({ ok: true })
+    }
+    const sent = await sendMessageWithKeyboard(
+      chatId,
+      "괴리율이 선택한 값 이하로 내려가면 매수 알림을 보냅니다.\n프리미엄 기준을 선택하세요.",
+      buildThresholdKeyboard(etf.ticker),
+    )
+    if (!sent.ok) {
+      console.error("[telegram:webhook] sub edit pick send failed", {
         chatId,
         error: sent.error ?? "unknown",
         ticker,
