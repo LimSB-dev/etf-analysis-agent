@@ -29,10 +29,11 @@ import {
 import { isValidLocale } from "@/lib/i18n/config"
 import { SITE_URL, TELEGRAM_CHANNEL_URL } from "@/lib/site-config"
 import {
+  getSubscribedTickersForTelegramChat,
   mergeKvOnlySubscriptionsIntoUserPreferences,
   upsertUserPreferenceFromTelegramSubscription,
 } from "@/lib/telegram-db-preferences-sync"
-import { addSubscription, listSubscriptions } from "@/lib/subscriptions"
+import { addSubscription } from "@/lib/subscriptions"
 import {
   buildTelegramHelpHtml,
   buildTelegramPremiumSnapshotHtml,
@@ -312,9 +313,7 @@ export async function POST(request: NextRequest) {
     ) {
       const locRaw = await getDbLocaleForTelegramChat(chatId)
       const locale = resolveTelegramLocale(locRaw)
-      const all = await listSubscriptions()
-      const mine = all.filter((s) => s.chat_id === chatId)
-      const tickers = mine.map((s) => s.etf_ticker)
+      const tickers = await getSubscribedTickersForTelegramChat(chatId)
       const snap = await buildTelegramSubscribedPremiumSnapshotHtml(locale, tickers)
       await sendText(
         chatId,
