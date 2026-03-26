@@ -8,7 +8,7 @@ describe("lib/telegram-help.buildTelegramHelpHtml", () => {
     const html = buildTelegramHelpHtml("ko", site, "https://t.me/example");
     expect(html).toContain("/subscribe");
     expect(html).toContain("/mypage");
-    expect(html).toContain("관심 ETF");
+    expect(html).toContain("기본값");
     expect(html).not.toContain("v0-etf-analysis-agent.vercel.app");
   });
 
@@ -16,7 +16,7 @@ describe("lib/telegram-help.buildTelegramHelpHtml", () => {
     const site = "https://etf-analysis-agent.vercel.app";
     const html = buildTelegramHelpHtml("en", site, "https://t.me/example");
     expect(html).toContain("/subscribe");
-    expect(html).toContain("website watchlist");
+    expect(html).toContain("defaults");
     expect(html).toContain("/mypage");
   });
 });
