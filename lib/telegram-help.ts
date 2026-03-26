@@ -39,9 +39,10 @@ export function buildTelegramHelpHtml(
       `<code>/my</code> · <code>/subs</code> — snapshot for your subscribed tickers only.\n` +
       `Full iNAV calculator &amp; charts: <a href="${escapeHtml(webLink)}">website</a>\n\n` +
       `<b>Change what this bot alerts (subscription)</b>\n` +
-      `<code>/start</code> — pick ETF and buy/sell thresholds. Run again anytime to update.\n` +
+      `<code>/start</code> — welcome only (see <code>/help</code>).\n` +
+      `<code>/subscribe</code> — pick an ETF, then buy &amp; sell thresholds in one step and save.\n` +
       `<code>/edit</code> — pick a subscribed ETF and update thresholds.\n` +
-      `Or link from <a href="${escapeHtml(mypageLink)}">My page</a> (web login) to sync your watchlist.\n\n` +
+      `If Telegram is linked from <a href="${escapeHtml(mypageLink)}">My page</a>, <code>/subscribe</code> saves the same ETF and thresholds to your <b>website watchlist</b>. Link once from the web to keep bot and My page in sync. View tickers in chat with <code>/subs</code> · <code>/my</code>.\n\n` +
       `<b>Quick links in alerts</b>\n` +
       `<code>/brokers</code> — Naver, Toss, and broker apps (up to 5 total, same as web when linked).\n\n` +
       `<b>Public summary channel</b>\n` +
@@ -58,9 +59,10 @@ export function buildTelegramHelpHtml(
     `<code>/my</code> · <code>/subs</code> · <code>/구독</code> — 내가 구독한 ETF만 괴리율·신호를 확인합니다.\n` +
     `iNAV·차트 등 자세한 분석: <a href="${escapeHtml(webLink)}">웹사이트</a>\n\n` +
     `<b>구독(알림) ETF·기준 바꾸기</b>\n` +
-    `<code>/start</code> — 알림 받을 ETF와 매수·매도 기준을 다시 선택합니다. 언제든 다시 실행해 갱신할 수 있어요.\n` +
-    `<code>/edit</code> · <code>/구독수정</code> — 구독한 ETF의 매수·매도 기준을 수정합니다.\n` +
-    `웹 <a href="${escapeHtml(mypageLink)}">마이페이지</a>에서 텔레그램 연동 시 관심 리스트와 동기화됩니다.\n\n` +
+    `<code>/start</code> — 환영 안내만 합니다. 전체 명령·링크는 <code>/help</code>를 눌러 보세요.\n` +
+    `<code>/subscribe</code> · <code>/구독추가</code> — 알림 받을 ETF를 고른 뒤, 매수·매도 기준을 한 화면에서 골라 저장합니다.\n` +
+    `<code>/edit</code> · <code>/구독수정</code> — 이미 구독한 ETF의 기준만 바꿉니다.\n` +
+    `웹 <a href="${escapeHtml(mypageLink)}">마이페이지</a>에서 텔레그램을 연결해 두면 <code>/subscribe</code>로 저장한 ETF·기준이 <b>관심 ETF(DB)</b>에도 같이 저장됩니다. 먼저 봇만 쓰다가 연동하면, 그때 웹에 없는 종목만 KV에서 웹으로 합쳐 집니다. 채팅에서는 <code>/subs</code> · <code>/my</code>로 목록을 봅니다.\n\n` +
     `<b>빠른 이동 링크(네이버·토스·증권사)</b>\n` +
     `<code>/brokers</code> · <code>/증권사</code> — 알림에 넣을 링크를 최대 5개까지 선택. 마이페이지에서도 같이 설정할 수 있어요.\n\n` +
     `<b>공개 알림 채널</b>\n` +
@@ -122,8 +124,8 @@ export async function buildTelegramSubscribedPremiumSnapshotHtml(
       ok: false,
       message:
         locale === "en"
-          ? "No subscriptions yet. Run /start to subscribe."
-          : "아직 구독한 ETF가 없습니다. /start 로 구독을 시작해 주세요.",
+          ? "No subscriptions yet. Run /subscribe to add one."
+          : "아직 구독한 ETF가 없습니다. /subscribe 로 구독을 추가해 주세요.",
     }
   }
 
@@ -158,8 +160,8 @@ export async function buildTelegramSubscribedPremiumSnapshotHtml(
         ok: false,
         message:
           locale === "en"
-            ? "Subscribed tickers were not found. Run /start again."
-            : "구독한 ETF를 찾을 수 없습니다. /start 로 다시 설정해 주세요.",
+            ? "Subscribed tickers were not found. Run /subscribe or /edit again."
+            : "구독한 ETF를 찾을 수 없습니다. /subscribe 또는 /edit 로 다시 설정해 주세요.",
       }
     }
 

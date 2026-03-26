@@ -32,7 +32,7 @@ function areTelegramBrokerSelectionsEqual(
 
 type PreferencesByEtfType = Record<
   string,
-  { buyPremiumThreshold: number; sellPremiumThreshold: number }
+  { buyPremiumThreshold: number; sellPremiumThreshold: number | null }
 >;
 
 export default function MypagePage() {
@@ -92,7 +92,8 @@ export default function MypagePage() {
               etfId &&
               p &&
               typeof p.buyPremiumThreshold === "number" &&
-              typeof p.sellPremiumThreshold === "number"
+              (p.sellPremiumThreshold === null ||
+                typeof p.sellPremiumThreshold === "number")
             ) {
               next[etfId] = {
                 buyPremiumThreshold: p.buyPremiumThreshold,
@@ -215,24 +216,27 @@ export default function MypagePage() {
   }, []);
 
   const setBuy = useCallback((etfId: string, value: number) => {
-    setPreferences((prev) => ({
-      ...prev,
-      [etfId]: {
-        ...prev[etfId],
-        buyPremiumThreshold: value,
-        sellPremiumThreshold:
-          typeof prev[etfId]?.sellPremiumThreshold === "number"
-            ? prev[etfId].sellPremiumThreshold
-            : DEFAULT_SELL,
-      },
-    }));
+    setPreferences((prev) => {
+      const prevSell = prev[etfId]?.sellPremiumThreshold;
+      return {
+        ...prev,
+        [etfId]: {
+          buyPremiumThreshold: value,
+          sellPremiumThreshold:
+            prevSell === null
+              ? null
+              : typeof prevSell === "number"
+                ? prevSell
+                : DEFAULT_SELL,
+        },
+      };
+    });
   }, []);
 
-  const setSell = useCallback((etfId: string, value: number) => {
+  const setSell = useCallback((etfId: string, value: number | null) => {
     setPreferences((prev) => ({
       ...prev,
       [etfId]: {
-        ...prev[etfId],
         buyPremiumThreshold:
           typeof prev[etfId]?.buyPremiumThreshold === "number"
             ? prev[etfId].buyPremiumThreshold
@@ -380,7 +384,10 @@ export default function MypagePage() {
         setValidationError(`validationBuy:${etfId}`);
         return;
       }
-      if (p.sellPremiumThreshold < 0) {
+      if (
+        p.sellPremiumThreshold != null &&
+        p.sellPremiumThreshold < 0
+      ) {
         setValidationError(`validationSell:${etfId}`);
         return;
       }
@@ -422,11 +429,17 @@ export default function MypagePage() {
           for (const [etfId, p] of Object.entries(data.preferences ?? {})) {
             byEtf[etfId] = {
               buy: p.buyPremiumThreshold ?? DEFAULT_BUY,
-              sell: p.sellPremiumThreshold ?? DEFAULT_SELL,
+              sell:
+                p.sellPremiumThreshold == null
+                  ? DEFAULT_SELL
+                  : p.sellPremiumThreshold,
             };
             nextInitial[etfId] = {
               buyPremiumThreshold: p.buyPremiumThreshold ?? DEFAULT_BUY,
-              sellPremiumThreshold: p.sellPremiumThreshold ?? DEFAULT_SELL,
+              sellPremiumThreshold:
+                p.sellPremiumThreshold === null
+                  ? null
+                  : (p.sellPremiumThreshold ?? DEFAULT_SELL),
             };
           }
           dispatch(setUserThresholdsByEtf(byEtf));
@@ -505,7 +518,7 @@ export default function MypagePage() {
                 setBuy(etfId, n);
                 setValidationError(null);
               }}
-              setSell={(etfId: string, n: number) => {
+              setSell={(etfId: string, n: number | null) => {
                 setSell(etfId, n);
                 setValidationError(null);
               }}

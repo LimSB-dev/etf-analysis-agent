@@ -9,7 +9,7 @@ export interface InterestEtfListEditPropsType {
   entries: InterestEtfEntryType[];
   validationError: string | null;
   setBuy: (etfId: string, value: number) => void;
-  setSell: (etfId: string, value: number) => void;
+  setSell: (etfId: string, value: number | null) => void;
   removeEtf: (etfId: string) => void;
   addFormEtfId: string;
   setAddFormEtfId: (v: string) => void;
@@ -120,23 +120,51 @@ export const InterestEtfListEdit = ({
                   >
                     {t("sellThresholdLabel")}
                   </label>
-                  <ThresholdPercentInput
-                    id={`sell-mobile-${etfId}`}
-                    value={p.sellPremiumThreshold}
-                    onChange={(n) => {
-                      setSell(etfId, n);
-                    }}
-                    min={0}
-                    max={20}
-                    variant="sell"
-                    fallbackWhenInvalid={defaultSell}
-                    size="default"
-                    unitLabel={t("unitPercent")}
-                    aria-invalid={sellErr}
-                    aria-describedby={
-                      sellErr ? `sell-error-mobile-${etfId}` : undefined
-                    }
-                  />
+                  {p.sellPremiumThreshold === null ? (
+                    <div className="space-y-1.5">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {t("sellThresholdNone")}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSell(etfId, defaultSell);
+                        }}
+                        className="text-xs font-medium text-blue-600 underline underline-offset-2 dark:text-blue-400"
+                      >
+                        {t("sellThresholdEnableSell")}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <ThresholdPercentInput
+                        id={`sell-mobile-${etfId}`}
+                        value={p.sellPremiumThreshold}
+                        onChange={(n) => {
+                          setSell(etfId, n);
+                        }}
+                        min={0}
+                        max={20}
+                        variant="sell"
+                        fallbackWhenInvalid={defaultSell}
+                        size="default"
+                        unitLabel={t("unitPercent")}
+                        aria-invalid={sellErr}
+                        aria-describedby={
+                          sellErr ? `sell-error-mobile-${etfId}` : undefined
+                        }
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSell(etfId, null);
+                        }}
+                        className="text-xs font-medium text-gray-600 underline underline-offset-2 dark:text-gray-400"
+                      >
+                        {t("sellThresholdTurnOffSell")}
+                      </button>
+                    </div>
+                  )}
                   {sellErr && (
                     <p
                       id={`sell-error-mobile-${etfId}`}
@@ -312,24 +340,52 @@ export const InterestEtfListEdit = ({
                       </p>
                     )}
                   </td>
-                  <td className="py-3 pr-4">
-                    <ThresholdPercentInput
-                      id={`sell-${etfId}`}
-                      value={p.sellPremiumThreshold}
-                      onChange={(n) => {
-                        setSell(etfId, n);
-                      }}
-                      min={0}
-                      max={20}
-                      variant="sell"
-                      fallbackWhenInvalid={defaultSell}
-                      size="default"
-                      unitLabel={t("unitPercent")}
-                      aria-invalid={sellErr}
-                      aria-describedby={
-                        sellErr ? `sell-error-${etfId}` : undefined
-                      }
-                    />
+                  <td className="py-3 pr-4 align-top">
+                    {p.sellPremiumThreshold === null ? (
+                      <div className="space-y-1.5">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {t("sellThresholdNone")}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSell(etfId, defaultSell);
+                          }}
+                          className="text-xs font-medium text-blue-600 underline underline-offset-2 dark:text-blue-400"
+                        >
+                          {t("sellThresholdEnableSell")}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <ThresholdPercentInput
+                          id={`sell-${etfId}`}
+                          value={p.sellPremiumThreshold}
+                          onChange={(n) => {
+                            setSell(etfId, n);
+                          }}
+                          min={0}
+                          max={20}
+                          variant="sell"
+                          fallbackWhenInvalid={defaultSell}
+                          size="default"
+                          unitLabel={t("unitPercent")}
+                          aria-invalid={sellErr}
+                          aria-describedby={
+                            sellErr ? `sell-error-${etfId}` : undefined
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSell(etfId, null);
+                          }}
+                          className="text-xs font-medium text-gray-600 underline underline-offset-2 dark:text-gray-400"
+                        >
+                          {t("sellThresholdTurnOffSell")}
+                        </button>
+                      </div>
+                    )}
                     {sellErr && (
                       <p
                         id={`sell-error-${etfId}`}
