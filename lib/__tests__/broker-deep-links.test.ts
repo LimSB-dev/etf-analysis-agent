@@ -57,8 +57,8 @@ describe("lib/broker-deep-links", () => {
     const html = buildSubscriptionQuickLinksHtml("123456", "ko", null);
 
     expect(html).toContain("🔗 빠른 이동");
-    // 앱 딥링크도 "증권사 이름에 링크" 형태로 포함된다
-    expect(html).toContain("<a href=\"miraeassetTrade://?code=123456\">미래에셋</a>");
+    // 텔레그램 HTML은 비-HTTP(s) 스킴 링크를 거부할 수 있어, siteUrl 미제공 시 텍스트로만 노출된다
+    expect(html).toContain("미래에셋: miraeassetTrade://?code=123456");
   });
 
   test("locale이 en이면 제목이 영어로 바뀐다", () => {

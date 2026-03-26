@@ -13,6 +13,7 @@ import { getEtfList, type EtfApiItemType } from "@/lib/getEtfList"
 import { ETF_OPTIONS } from "@/lib/etf-options"
 import { isValidLocale } from "@/lib/i18n/config"
 import type { Locale } from "@/lib/i18n/config"
+import { SITE_URL } from "@/lib/site-config"
 import {
   buildSubscriptionQuickLinksHtml,
   escapeHtml,
@@ -180,6 +181,7 @@ export async function GET(request: NextRequest) {
         etf.ticker,
         locale,
         brokerPrefsByChat.get(sub.chat_id) ?? null,
+        SITE_URL,
       )
     const res = await sendText(sub.chat_id, line, {
       parseMode: "HTML",
@@ -240,6 +242,7 @@ export async function GET(request: NextRequest) {
             etf.ticker,
             locale,
             brokerPrefsDigest,
+            SITE_URL,
           ),
       )
       digestLines.push("")
