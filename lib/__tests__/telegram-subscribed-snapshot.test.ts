@@ -31,7 +31,7 @@ describe("lib/telegram-help.buildTelegramSubscribedPremiumSnapshotHtml", () => {
   });
 
   test("구독 tickers가 비어있으면 ok:false", async () => {
-    const res = await buildTelegramSubscribedPremiumSnapshotHtml("ko", []);
+    const res = await buildTelegramSubscribedPremiumSnapshotHtml("ko", [], []);
     expect(res.ok).toBe(false);
     if (!res.ok) {
       expect(res.message).toContain("/subscribe");
@@ -41,7 +41,7 @@ describe("lib/telegram-help.buildTelegramSubscribedPremiumSnapshotHtml", () => {
   test("구독 tickers만 포함해 스냅샷을 만든다", async () => {
     const res = await buildTelegramSubscribedPremiumSnapshotHtml("ko", [
       "133690",
-    ]);
+    ], []);
     expect(res.ok).toBe(true);
     if (res.ok) {
       expect(res.html).toContain("내 구독 괴리율");

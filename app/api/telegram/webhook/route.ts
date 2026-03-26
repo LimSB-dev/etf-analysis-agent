@@ -322,6 +322,7 @@ export async function POST(request: NextRequest) {
         locale,
         tickers,
         brokerIdsToShow,
+        SITE_URL,
       )
       await sendText(
         chatId,

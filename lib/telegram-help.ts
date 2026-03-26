@@ -117,6 +117,7 @@ export async function buildTelegramSubscribedPremiumSnapshotHtml(
   locale: Locale,
   tickers: string[],
   brokerIds: string[] | null,
+  siteUrl?: string,
 ): Promise<{ ok: true; html: string } | { ok: false; message: string }> {
   const uniq = [...new Set(tickers.map((t) => t.replace(/\D/g, "")))].filter(
     (t) => t.length === 6,
@@ -154,7 +155,7 @@ export async function buildTelegramSubscribedPremiumSnapshotHtml(
       lines.push(
         `<b>${escapeHtml(etf.name)}</b>\n` +
           `${escapeHtml(line)} ${signal}` +
-          buildSubscriptionQuickLinksHtml(etf.ticker, locale, brokerIds),
+          buildSubscriptionQuickLinksHtml(etf.ticker, locale, brokerIds, siteUrl),
       )
       lines.push("")
     }
