@@ -3,6 +3,7 @@
  */
 
 import { escapeHtml } from "@/lib/broker-deep-links"
+import { buildSubscriptionQuickLinksHtml } from "@/lib/broker-deep-links"
 import { getEtfList } from "@/lib/getEtfList"
 import type { Locale } from "@/lib/i18n/config"
 import {
@@ -115,6 +116,7 @@ export async function buildTelegramPremiumSnapshotHtml(
 export async function buildTelegramSubscribedPremiumSnapshotHtml(
   locale: Locale,
   tickers: string[],
+  brokerIds: string[] | null,
 ): Promise<{ ok: true; html: string } | { ok: false; message: string }> {
   const uniq = [...new Set(tickers.map((t) => t.replace(/\D/g, "")))].filter(
     (t) => t.length === 6,
@@ -150,7 +152,9 @@ export async function buildTelegramSubscribedPremiumSnapshotHtml(
       const premStr = formatTelegramPremiumPct(etf.premium)
       const line = getTelegramPricePremiumLine(etf.price, premStr, locale)
       lines.push(
-        `<b>${escapeHtml(etf.name)}</b>\n` + `${escapeHtml(line)} ${signal}`,
+        `<b>${escapeHtml(etf.name)}</b>\n` +
+          `${escapeHtml(line)} ${signal}` +
+          buildSubscriptionQuickLinksHtml(etf.ticker, locale, brokerIds),
       )
       lines.push("")
     }

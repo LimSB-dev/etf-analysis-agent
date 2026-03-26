@@ -112,10 +112,6 @@ export function buildSubscriptionQuickLinksHtml(
     return ""
   }
   const quickTitle = locale === "en" ? "🔗 Quick links" : "🔗 빠른 이동"
-  const schemeNote =
-    locale === "en"
-      ? "📱 App deep links (behavior varies by app/version)"
-      : "📱 앱 딥링크(앱·버전마다 다를 수 있음)"
 
   let ordered: BrokerDeepLinkOptionType[] = []
 
@@ -140,27 +136,15 @@ export function buildSubscriptionQuickLinksHtml(
   }
 
   const lines: string[] = ["", quickTitle]
-  const webParts: string[] = []
-  const appParts: string[] = []
+  const parts: string[] = []
 
   for (const o of ordered) {
     const label = locale === "en" ? o.labelEn : o.labelKo
     const url = o.build(code)
-    if (o.id === "naver" || o.id === "toss") {
-      webParts.push(
-        `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`,
-      )
-    } else {
-      appParts.push(`${escapeHtml(label)}: ${url}`)
-    }
+    parts.push(`<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`)
   }
 
-  if (webParts.length > 0) {
-    lines.push(webParts.join(" · "))
-  }
-  if (appParts.length > 0) {
-    lines.push("", schemeNote, ...appParts)
-  }
+  lines.push(parts.join(" · "))
 
   return lines.join("\n")
 }

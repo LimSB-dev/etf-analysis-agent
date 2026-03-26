@@ -22,6 +22,7 @@ import { BROKER_DEEP_LINK_IDS, escapeHtml } from "@/lib/broker-deep-links"
 import {
   clearPendingBrokerSel,
   getBrokerLinkPrefs,
+  normalizeBrokerIds,
   getPendingBrokerSel,
   setBrokerLinkPrefs,
   setPendingBrokerSel,
@@ -30,6 +31,7 @@ import { isValidLocale } from "@/lib/i18n/config"
 import { SITE_URL, TELEGRAM_CHANNEL_URL } from "@/lib/site-config"
 import {
   getSubscribedTickersForTelegramChat,
+  getUserIdByTelegramChatId,
   mergeKvOnlySubscriptionsIntoUserPreferences,
   upsertUserPreferenceFromTelegramSubscription,
 } from "@/lib/telegram-db-preferences-sync"
@@ -294,7 +296,33 @@ export async function POST(request: NextRequest) {
       const locRaw = await getDbLocaleForTelegramChat(chatId)
       const locale = resolveTelegramLocale(locRaw)
       const tickers = await getSubscribedTickersForTelegramChat(chatId)
-      const snap = await buildTelegramSubscribedPremiumSnapshotHtml(locale, tickers)
+      let brokerIds: string[] | null = null
+      const userId = await getUserIdByTelegramChatId(chatId)
+      if (userId) {
+        const row = await db
+          .select({ telegramBrokerLinkIds: userPreferences.telegramBrokerLinkIds })
+          .from(userPreferences)
+          .where(eq(userPreferences.userId, userId))
+          .limit(1)
+          .then((r) => r[0] ?? null)
+        const dbIds = row?.telegramBrokerLinkIds
+        if (Array.isArray(dbIds) && dbIds.every((x) => typeof x === "string")) {
+          brokerIds = normalizeBrokerIds(dbIds)
+        }
+      }
+      if (brokerIds == null) {
+        const kvIds = await getBrokerLinkPrefs(chatId)
+        brokerIds = kvIds
+      }
+      // "딥링크 연결"이 된 경우에만 표시
+      const brokerIdsToShow =
+        Array.isArray(brokerIds) && brokerIds.length > 0 ? brokerIds : []
+
+      const snap = await buildTelegramSubscribedPremiumSnapshotHtml(
+        locale,
+        tickers,
+        brokerIdsToShow,
+      )
       await sendText(
         chatId,
         snap.ok ? snap.html : snap.message,
