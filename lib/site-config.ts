@@ -1,9 +1,18 @@
-/** 사이트 절대 URL (메타데이터·OG 이미지 등, 미설정 시 Vercel 배포 URL 또는 로컬) */
+/**
+ * 사이트 절대 URL (메타데이터·OG 이미지·텔레그램 링크 등)
+ *
+ * 목표: "항상 고정 도메인(프로덕션)"을 기본으로 쓰고,
+ * 프리뷰/임시 Vercel 도메인(VERCEL_URL)은 마지막 폴백으로만 사용한다.
+ */
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-  (typeof process.env.VERCEL_URL !== "undefined"
-    ? `https://${process.env.VERCEL_URL}`
-    : "https://etf-analysis-agent.vercel.app");
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_ENV === "production"
+      ? "https://etf-analysis-agent.vercel.app"
+      : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000");
 
 /** GitHub 이슈 목록 URL (환경변수 NEXT_PUBLIC_GITHUB_ISSUES_URL 로 설정, 미설정 시 기본값 사용). 기능 요청 시 이슈 현황으로 연결 */
 export const GITHUB_ISSUES_URL =
