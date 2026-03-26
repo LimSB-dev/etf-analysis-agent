@@ -9,7 +9,8 @@ import { isValidLocale, type Locale } from "@/lib/i18n/config";
 
 export type EtfPreferenceItemType = {
   buyPremiumThreshold: number;
-  sellPremiumThreshold: number;
+  /** null: 매도 알림 없음(텔레그램과 동일 의미) */
+  sellPremiumThreshold: number | null;
 };
 
 export interface MypagePreferencesResponseType {
@@ -56,7 +57,8 @@ export async function GET(): Promise<
       etfId &&
       p &&
       typeof p.buyPremiumThreshold === "number" &&
-      typeof p.sellPremiumThreshold === "number"
+      (p.sellPremiumThreshold === null ||
+        typeof p.sellPremiumThreshold === "number")
     ) {
       preferences[etfId] = {
         buyPremiumThreshold: p.buyPremiumThreshold,
@@ -97,7 +99,7 @@ export async function PATCH(
   let body: {
     preferences?: Record<
       string,
-      { buyPremiumThreshold?: number; sellPremiumThreshold?: number }
+      { buyPremiumThreshold?: number; sellPremiumThreshold?: number | null }
     >;
     locale?: string;
     telegramBrokerLinkIds?: unknown;
@@ -134,7 +136,7 @@ export async function PATCH(
   if (prefs && typeof prefs === "object") {
     const nextPrefs: Record<
       string,
-      { buyPremiumThreshold: number; sellPremiumThreshold: number }
+      { buyPremiumThreshold: number; sellPremiumThreshold: number | null }
     > = {};
     for (const [etfId, value] of Object.entries(prefs)) {
       if (!etfId || typeof value !== "object") {
@@ -144,10 +146,14 @@ export async function PATCH(
         typeof value.buyPremiumThreshold === "number"
           ? value.buyPremiumThreshold
           : DEFAULT_BUY;
-      const sell =
-        typeof value.sellPremiumThreshold === "number"
-          ? value.sellPremiumThreshold
-          : DEFAULT_SELL;
+      let sell: number | null;
+      if (value.sellPremiumThreshold === null) {
+        sell = null;
+      } else if (typeof value.sellPremiumThreshold === "number") {
+        sell = value.sellPremiumThreshold;
+      } else {
+        sell = DEFAULT_SELL;
+      }
       nextPrefs[etfId] = { buyPremiumThreshold: buy, sellPremiumThreshold: sell };
     }
 

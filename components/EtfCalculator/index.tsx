@@ -70,13 +70,21 @@ export function EtfCalculator() {
     fetch("/api/mypage/preferences")
       .then((res) => (res.ok ? res.json() : null))
       .then(
-        (data: { preferences?: Record<string, { buyPremiumThreshold: number; sellPremiumThreshold: number }> } | null) => {
+        (data: {
+          preferences?: Record<
+            string,
+            { buyPremiumThreshold: number; sellPremiumThreshold: number | null }
+          >;
+        } | null) => {
           if (data?.preferences && Object.keys(data.preferences).length > 0) {
             const byEtf: Record<string, { buy: number; sell: number }> = {};
             for (const [etfId, p] of Object.entries(data.preferences)) {
               byEtf[etfId] = {
                 buy: p.buyPremiumThreshold ?? -1,
-                sell: p.sellPremiumThreshold ?? 1,
+                sell:
+                  p.sellPremiumThreshold == null
+                    ? 1
+                    : p.sellPremiumThreshold,
               };
             }
             dispatch(setUserThresholdsByEtf(byEtf));

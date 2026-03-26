@@ -33,12 +33,12 @@ export const users = pgTable("users", {
 // ---------------------------------------------------------------------------
 // 사용자별 ETF 프리미엄 기준 (한 유저 1 row, JSONB)
 // - 읽기/쓰기 모두 user_id 기준 전체 조회·전체 갱신만 하므로 row 수·쿼리 수·메모리 유리
-// - preferences: { [etfId]: { buyPremiumThreshold, sellPremiumThreshold } }
+// - preferences: { [etfId]: { buyPremiumThreshold, sellPremiumThreshold|null } } — sell null = 매도 알림 없음
 // ---------------------------------------------------------------------------
 
 export type UserPreferencesJsonType = Record<
   string,
-  { buyPremiumThreshold: number; sellPremiumThreshold: number }
+  { buyPremiumThreshold: number; sellPremiumThreshold: number | null }
 >;
 
 export const userPreferences = pgTable("user_preferences", {

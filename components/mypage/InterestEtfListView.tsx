@@ -37,9 +37,10 @@ export const InterestEtfListView = ({
                   ·
                 </span>
                 <span className="text-red-600 dark:text-red-400">
-                  {t("sellThresholdLabel")}: {p.sellPremiumThreshold >= 0 ? "+" : ""}
-                  {p.sellPremiumThreshold}
-                  {t("unitPercent")}
+                  {t("sellThresholdLabel")}:{" "}
+                  {p.sellPremiumThreshold === null
+                    ? t("sellThresholdNone")
+                    : `${p.sellPremiumThreshold >= 0 ? "+" : ""}${p.sellPremiumThreshold}${t("unitPercent")}`}
                 </span>
               </p>
             </li>
@@ -95,10 +96,9 @@ export const InterestEtfListView = ({
                     {t("unitPercent")}
                   </td>
                   <td className="py-3 pr-4 font-medium text-red-700 dark:text-red-400">
-                    {p.sellPremiumThreshold >= 0
-                      ? `+${p.sellPremiumThreshold}`
-                      : p.sellPremiumThreshold}
-                    {t("unitPercent")}
+                    {p.sellPremiumThreshold === null
+                      ? t("sellThresholdNone")
+                      : `${p.sellPremiumThreshold >= 0 ? "+" : ""}${p.sellPremiumThreshold}${t("unitPercent")}`}
                   </td>
                 </tr>
               ))

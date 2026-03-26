@@ -4,6 +4,7 @@ export interface InterestEtfEntryType {
   name: string;
   p: {
     buyPremiumThreshold: number;
-    sellPremiumThreshold: number;
+    /** null = 텔레그램과 동일하게 매도 알림 없음 */
+    sellPremiumThreshold: number | null;
   };
 }
