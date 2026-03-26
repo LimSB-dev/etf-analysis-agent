@@ -57,6 +57,31 @@ export async function getBotUsername(): Promise<string | null> {
 }
 
 /**
+ * 현재 webhook 설정 상태 조회
+ * @see https://core.telegram.org/bots/api#getwebhookinfo
+ */
+export async function getWebhookInfo(): Promise<
+  | { ok: true; info: unknown }
+  | { ok: false; error: string }
+> {
+  const token = getBotToken()
+  if (!token) {
+    return { ok: false, error: "TELEGRAM_BOT_TOKEN not set" }
+  }
+  try {
+    const res = await fetch(`${TELEGRAM_API_BASE}/bot${token}/getWebhookInfo`)
+    const data = (await res.json()) as { ok: boolean; result?: unknown; description?: string }
+    if (!data.ok) {
+      return { ok: false, error: data.description ?? "Unknown error" }
+    }
+    return { ok: true, info: data.result }
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e)
+    return { ok: false, error: err }
+  }
+}
+
+/**
  * Telegram sendMessage API 호출
  * @see https://core.telegram.org/bots/api#sendmessage
  */

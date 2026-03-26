@@ -10,7 +10,11 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    include: ["lib/**/*.test.ts", "lib/**/__tests__/**/*.test.ts"],
+    include: [
+      "lib/**/*.test.ts",
+      "lib/**/__tests__/**/*.test.ts",
+      "app/**/*.test.ts",
+    ],
   },
 });
 
