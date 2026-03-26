@@ -12,9 +12,23 @@ import { InterestEtfListView } from "@/components/mypage/InterestEtfListView";
 import { InterestEtfListEdit } from "@/components/mypage/InterestEtfListEdit";
 import { MypageFormActions } from "@/components/mypage/MypageFormActions";
 import { MypageSkeleton } from "@/components/mypage/MypageSkeleton";
+import { MypageTelegramBrokerPick } from "@/components/mypage/MypageTelegramBrokerPick";
+import { MAX_QUICK_LINK_SELECTIONS } from "@/lib/broker-deep-links";
 
 const DEFAULT_BUY = -1;
 const DEFAULT_SELL = 1;
+
+function areTelegramBrokerSelectionsEqual(
+  initial: string[] | null,
+  current: string[],
+): boolean {
+  if (initial === null) {
+    return current.length === 0;
+  }
+  const a = [...initial].sort().join("\0");
+  const b = [...current].sort().join("\0");
+  return a === b;
+}
 
 type PreferencesByEtfType = Record<
   string,
@@ -47,6 +61,11 @@ export default function MypagePage() {
   const [telegramLinked, setTelegramLinked] = useState(false);
   const [telegramUnlinkLoading, setTelegramUnlinkLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [telegramBrokerLinkIds, setTelegramBrokerLinkIds] = useState<string[]>(
+    [],
+  );
+  const [initialTelegramBrokerLinkIds, setInitialTelegramBrokerLinkIds] =
+    useState<string[] | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -63,6 +82,7 @@ export default function MypagePage() {
           data: {
             preferences?: PreferencesByEtfType;
             telegramLinked?: boolean;
+            telegramBrokerLinkIds?: string[] | null;
           } | null,
         ) => {
           const next: PreferencesByEtfType = {};
@@ -83,6 +103,14 @@ export default function MypagePage() {
           setPreferences(next);
           setInitialPreferences(next);
           setTelegramLinked(Boolean(data?.telegramLinked));
+          const rawBrokers = data?.telegramBrokerLinkIds;
+          if (Array.isArray(rawBrokers)) {
+            setInitialTelegramBrokerLinkIds([...rawBrokers]);
+            setTelegramBrokerLinkIds([...rawBrokers]);
+          } else {
+            setInitialTelegramBrokerLinkIds(null);
+            setTelegramBrokerLinkIds([]);
+          }
         },
       )
       .catch(() => {})
@@ -91,7 +119,7 @@ export default function MypagePage() {
       });
   }, [status, router]);
 
-  const isDirty = useMemo(() => {
+  const preferencesDirty = useMemo(() => {
     const a = preferences;
     const b = initialPreferences;
     const ids = new Set([...Object.keys(a), ...Object.keys(b)]);
@@ -111,8 +139,19 @@ export default function MypagePage() {
     return false;
   }, [preferences, initialPreferences]);
 
+  const brokersDirty = useMemo(
+    () =>
+      !areTelegramBrokerSelectionsEqual(
+        initialTelegramBrokerLinkIds,
+        telegramBrokerLinkIds,
+      ),
+    [initialTelegramBrokerLinkIds, telegramBrokerLinkIds],
+  );
+
+  const hasUnsavedChanges = preferencesDirty || brokersDirty;
+
   useEffect(() => {
-    if (!isDirty) {
+    if (!hasUnsavedChanges) {
       return;
     }
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -123,10 +162,10 @@ export default function MypagePage() {
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [isDirty]);
+  }, [hasUnsavedChanges]);
 
   useEffect(() => {
-    if (!isDirty || !pathname) {
+    if (!hasUnsavedChanges || !pathname) {
       return;
     }
     const handleClick = (e: MouseEvent) => {
@@ -158,7 +197,22 @@ export default function MypagePage() {
     return () => {
       document.removeEventListener("click", handleClick, true);
     };
-  }, [isDirty, pathname, router, t]);
+  }, [hasUnsavedChanges, pathname, router, t]);
+
+  const toggleTelegramBroker = useCallback((id: string) => {
+    setTelegramBrokerLinkIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        return [...next];
+      }
+      if (next.size >= MAX_QUICK_LINK_SELECTIONS) {
+        return prev;
+      }
+      next.add(id);
+      return [...next];
+    });
+  }, []);
 
   const setBuy = useCallback((etfId: string, value: number) => {
     setPreferences((prev) => ({
@@ -293,6 +347,11 @@ export default function MypagePage() {
 
   const cancelEditing = useCallback(() => {
     setPreferences({ ...initialPreferences });
+    if (initialTelegramBrokerLinkIds == null) {
+      setTelegramBrokerLinkIds([]);
+    } else {
+      setTelegramBrokerLinkIds([...initialTelegramBrokerLinkIds]);
+    }
     setValidationError(null);
     setAddFormEtfId("");
     setAddFormBuy(DEFAULT_BUY);
@@ -300,7 +359,7 @@ export default function MypagePage() {
     setAddFormError(null);
     setMessage(null);
     setIsEditing(false);
-  }, [initialPreferences]);
+  }, [initialPreferences, initialTelegramBrokerLinkIds]);
 
   const removeEtf = useCallback((etfId: string) => {
     setPreferences((prev) => {
@@ -330,10 +389,22 @@ export default function MypagePage() {
       return;
     }
     setSaving(true);
+    const patchBody: {
+      preferences: PreferencesByEtfType;
+      telegramBrokerLinkIds?: string[];
+    } = { preferences: { ...preferences } };
+    if (
+      !areTelegramBrokerSelectionsEqual(
+        initialTelegramBrokerLinkIds,
+        telegramBrokerLinkIds,
+      )
+    ) {
+      patchBody.telegramBrokerLinkIds = telegramBrokerLinkIds;
+    }
     fetch("/api/mypage/preferences", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preferences: { ...preferences } }),
+      body: JSON.stringify(patchBody),
     })
       .then((res) => {
         if (!res.ok) {
@@ -341,24 +412,37 @@ export default function MypagePage() {
         }
         return res.json();
       })
-      .then((data: { preferences?: PreferencesByEtfType }) => {
-        const byEtf: Record<string, { buy: number; sell: number }> = {};
-        const nextInitial: PreferencesByEtfType = {};
-        for (const [etfId, p] of Object.entries(data.preferences ?? {})) {
-          byEtf[etfId] = {
-            buy: p.buyPremiumThreshold ?? DEFAULT_BUY,
-            sell: p.sellPremiumThreshold ?? DEFAULT_SELL,
-          };
-          nextInitial[etfId] = {
-            buyPremiumThreshold: p.buyPremiumThreshold ?? DEFAULT_BUY,
-            sellPremiumThreshold: p.sellPremiumThreshold ?? DEFAULT_SELL,
-          };
-        }
-        dispatch(setUserThresholdsByEtf(byEtf));
-        setInitialPreferences(nextInitial);
-        setMessage("saved");
-        setIsEditing(false);
-      })
+      .then(
+        (data: {
+          preferences?: PreferencesByEtfType;
+          telegramBrokerLinkIds?: string[] | null;
+        }) => {
+          const byEtf: Record<string, { buy: number; sell: number }> = {};
+          const nextInitial: PreferencesByEtfType = {};
+          for (const [etfId, p] of Object.entries(data.preferences ?? {})) {
+            byEtf[etfId] = {
+              buy: p.buyPremiumThreshold ?? DEFAULT_BUY,
+              sell: p.sellPremiumThreshold ?? DEFAULT_SELL,
+            };
+            nextInitial[etfId] = {
+              buyPremiumThreshold: p.buyPremiumThreshold ?? DEFAULT_BUY,
+              sellPremiumThreshold: p.sellPremiumThreshold ?? DEFAULT_SELL,
+            };
+          }
+          dispatch(setUserThresholdsByEtf(byEtf));
+          setInitialPreferences(nextInitial);
+          const tb = data.telegramBrokerLinkIds;
+          if (Array.isArray(tb)) {
+            setInitialTelegramBrokerLinkIds([...tb]);
+            setTelegramBrokerLinkIds([...tb]);
+          } else {
+            setInitialTelegramBrokerLinkIds(null);
+            setTelegramBrokerLinkIds([]);
+          }
+          setMessage("saved");
+          setIsEditing(false);
+        },
+      )
       .catch(() => {
         setMessage("error");
       })
@@ -402,6 +486,12 @@ export default function MypagePage() {
           telegramLinkLoading={telegramLinkLoading}
           telegramUnlinkLoading={telegramUnlinkLoading}
           telegramLinkError={telegramLinkError}
+        />
+        <MypageTelegramBrokerPick
+          telegramLinked={telegramLinked}
+          selectedIds={telegramBrokerLinkIds}
+          onToggle={toggleTelegramBroker}
+          disabled={saving}
         />
         <div className="mt-4">
           {!isEditing && (
@@ -447,6 +537,7 @@ export default function MypagePage() {
 
         <MypageFormActions
           isEditing={isEditing}
+          hasUnsavedChanges={hasUnsavedChanges}
           onStartEditing={startEditing}
           onCancelEditing={cancelEditing}
           saving={saving}

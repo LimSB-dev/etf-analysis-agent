@@ -12,6 +12,8 @@ export interface SubscriptionType {
   etf_ticker: string
   premium_threshold: number
   sell_threshold?: number
+  /** 선택. 없으면 DB(users.telegramId) 또는 기본 ko */
+  locale?: string
   created_at: string
 }
 

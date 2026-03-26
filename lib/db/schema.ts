@@ -49,6 +49,10 @@ export const userPreferences = pgTable("user_preferences", {
     .$type<UserPreferencesJsonType>()
     .notNull()
     .default({}),
+  /** 텔레그램 알림 빠른 이동 id(네이버·토스·증권사 등) 최대 5개. null이면 웹 미설정(KV/레거시) */
+  telegramBrokerLinkIds: jsonb("telegram_broker_link_ids").$type<
+    string[] | null
+  >(),
   updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
     .notNull()
     .defaultNow(),

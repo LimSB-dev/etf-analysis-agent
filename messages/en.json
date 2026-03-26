@@ -221,6 +221,20 @@
     "telegramUnlinkFailed": "Failed to turn off alerts. Please try again later.",
     "telegramLinkRequesting": "Connecting…",
     "telegramLinkError": "Could not load the connection URL. Please try again later.",
-    "telegramBotNotConfigured": "Telegram bot is not configured."
+    "telegramBotNotConfigured": "Telegram bot is not configured.",
+    "telegramBrokersTitle": "Telegram alerts · quick links",
+    "telegramBrokersHint": "Choose up to 5 links: Naver, Toss, and broker app schemes. Unselected items are not added to alerts.",
+    "telegramBrokersNeedLink": "Connect Telegram below, then select brokers here to apply to alerts.",
+    "telegramBrokersCount": "Selected {count} / {max}",
+    "brokerOption_naver": "Naver quote",
+    "brokerOption_toss": "Toss Securities",
+    "brokerOption_mirae": "Mirae",
+    "brokerOption_kiwoom": "Kiwoom",
+    "brokerOption_kb": "KB",
+    "brokerOption_samsung": "Samsung",
+    "brokerOption_hankook": "Korea Inv.",
+    "brokerOption_nh": "NH",
+    "brokerOption_shinhan": "Shinhan",
+    "brokerOption_hana": "Hana"
   }
 }

@@ -221,6 +221,20 @@
     "telegramUnlinkFailed": "알림 해제에 실패했습니다. 잠시 후 다시 시도해 주세요.",
     "telegramLinkRequesting": "연결 중…",
     "telegramLinkError": "연결 URL을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
-    "telegramBotNotConfigured": "텔레그램 봇이 설정되지 않았습니다."
+    "telegramBotNotConfigured": "텔레그램 봇이 설정되지 않았습니다.",
+    "telegramBrokersTitle": "텔레그램 알림 · 빠른 이동 링크",
+    "telegramBrokersHint": "네이버·토스·증권사 앱 링크를 최대 5개까지 고를 수 있어요. 선택하지 않은 항목은 알림에 넣지 않습니다.",
+    "telegramBrokersNeedLink": "텔레그램을 연결한 뒤 아래에서 선택하면 알림에 반영됩니다.",
+    "telegramBrokersCount": "선택 {count} / {max}",
+    "brokerOption_naver": "네이버 시세",
+    "brokerOption_toss": "토스증권",
+    "brokerOption_mirae": "미래에셋",
+    "brokerOption_kiwoom": "키움",
+    "brokerOption_kb": "KB",
+    "brokerOption_samsung": "삼성",
+    "brokerOption_hankook": "한국투자",
+    "brokerOption_nh": "NH",
+    "brokerOption_shinhan": "신한",
+    "brokerOption_hana": "하나"
   }
 }

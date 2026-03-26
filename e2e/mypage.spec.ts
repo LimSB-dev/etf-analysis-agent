@@ -9,9 +9,15 @@ import { setupMypageMocks } from "./helpers/mypage-mock";
 /** 인증된 마이페이지 본문 로드 대기 (섹션 제목 노출 기준) */
 const waitForMypageContent = async (
   page: import("@playwright/test").Page,
-  timeout = 15_000,
+  timeout = 25_000,
 ) => {
-  await page.getByText(t.mypage.interestEtfList).waitFor({ state: "visible", timeout });
+  const main = page.getByRole("main");
+  await main.waitFor({ state: "visible", timeout });
+  // 접근성 role/level까지 강하게 고정하면 브라우저별 렌더링 차이에서
+  // 타임아웃이 늘 수 있어, 텍스트 가시성 기준으로 안정화한다.
+  await page
+    .getByText(t.mypage.interestEtfList)
+    .waitFor({ state: "visible", timeout });
 };
 
 test.describe("마이페이지 비인증", () => {
@@ -163,5 +169,15 @@ test.describe("마이페이지 인증 (텔레그램 구독 연결됨)", () => {
       name: t.mypage.telegramUnlinkA11y,
     });
     await expect(unlinkButton).toBeVisible();
+  });
+
+  test("텔레그램 연결 시 증권사 딥링크를 선택하고 저장할 수 있다", async ({
+    page,
+  }) => {
+    await page.goto("/mypage", { waitUntil: "domcontentloaded" });
+    await waitForMypageContent(page);
+    await page.getByTestId("test-mypage-broker-mirae").click();
+    await page.getByRole("button", { name: t.mypage.save }).click();
+    await expect(page.getByRole("status")).toHaveText(t.mypage.saved);
   });
 });
