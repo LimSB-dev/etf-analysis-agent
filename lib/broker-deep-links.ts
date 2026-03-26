@@ -8,31 +8,76 @@ export function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
 }
 
-/**
- * 구독 알림에 붙이는 "빠른 이동" 링크 (종목코드 = KRX 6자리, 서비스의 etf.ticker와 동일)
- *
- * - https 링크는 Telegram에서 안정적으로 탭 가능 (모바일에서 앱 연동되는 경우도 있음)
- * - 커스텀 스킴(miraeassetTrade:// 등)은 앱·버전마다 동작이 달라 본문에 보조로만 표기
- */
-
 const NAVER_STOCK_MOBILE = (code: string) =>
   `https://m.stock.naver.com/domestic/stock/${code}/total`
 
-/** 토스증권 국내 종목 웹 (A + 6자리 종목코드) */
 const TOSS_STOCK_ORDER = (code: string) =>
   `https://tossinvest.com/stocks/A${code}/order`
 
-/** 증권사 앱 스킴(경로는 비공개·변경 가능 — 탭 시 앱만 열리거나 무시될 수 있음) */
-const OPTIONAL_APP_SCHEMES: Array<{ label: string; build: (code: string) => string }> = [
-  { label: "미래에셋 M-STOCK", build: (c) => `miraeassetTrade://?code=${c}` },
-  { label: "키움 영웅문S#", build: (c) => `heromts://?code=${c}` },
-  { label: "KB M-able", build: (c) => `kbma://?code=${c}` },
-  { label: "삼성 mPOP", build: (c) => `mpopapp://?code=${c}` },
-  { label: "한국투자", build: (c) => `neosmartaf://?code=${c}` },
-  { label: "NH 나무", build: (c) => `txsmart://?code=${c}` },
-  { label: "신한 알파", build: (c) => `newshinhanialpha://?code=${c}` },
-  { label: "하나 원큐프로", build: (c) => `hanaoneqpro://?code=${c}` },
+export type BrokerDeepLinkOptionType = {
+  id: string
+  labelKo: string
+  labelEn: string
+  build: (code: string) => string
+}
+
+/** 알림에 넣을 수 있는 증권사 앱 스킴(최대 3개 선택) */
+export const BROKER_DEEP_LINK_OPTIONS: BrokerDeepLinkOptionType[] = [
+  {
+    id: "mirae",
+    labelKo: "미래에셋",
+    labelEn: "Mirae",
+    build: (c) => `miraeassetTrade://?code=${c}`,
+  },
+  {
+    id: "kiwoom",
+    labelKo: "키움",
+    labelEn: "Kiwoom",
+    build: (c) => `heromts://?code=${c}`,
+  },
+  {
+    id: "kb",
+    labelKo: "KB",
+    labelEn: "KB",
+    build: (c) => `kbma://?code=${c}`,
+  },
+  {
+    id: "samsung",
+    labelKo: "삼성",
+    labelEn: "Samsung",
+    build: (c) => `mpopapp://?code=${c}`,
+  },
+  {
+    id: "hankook",
+    labelKo: "한국투자",
+    labelEn: "Korea Inv.",
+    build: (c) => `neosmartaf://?code=${c}`,
+  },
+  {
+    id: "nh",
+    labelKo: "NH",
+    labelEn: "NH",
+    build: (c) => `txsmart://?code=${c}`,
+  },
+  {
+    id: "shinhan",
+    labelKo: "신한",
+    labelEn: "Shinhan",
+    build: (c) => `newshinhanialpha://?code=${c}`,
+  },
+  {
+    id: "hana",
+    labelKo: "하나",
+    labelEn: "Hana",
+    build: (c) => `hanaoneqpro://?code=${c}`,
+  },
 ]
+
+export const BROKER_DEEP_LINK_IDS = BROKER_DEEP_LINK_OPTIONS.map((o) => o.id)
+
+export function getBrokerOptionById(id: string): BrokerDeepLinkOptionType | undefined {
+  return BROKER_DEEP_LINK_OPTIONS.find((o) => o.id === id)
+}
 
 function normalizeSixDigitCode(raw: string): string | null {
   const digits = raw.replace(/\D/g, "")
@@ -43,13 +88,15 @@ function normalizeSixDigitCode(raw: string): string | null {
 }
 
 /**
- * HTML(parse_mode HTML)용: 구독 전용 메시지 하단에 붙이는 링크 블록
- * @param includeAppSchemes - TELEGRAM_INCLUDE_BROKER_APP_SCHEMES=1 일 때만 증권사 커스텀 스킴 줄 추가 (비기본)
+ * @param selectedBrokerIds
+ *   - null: 레거시 — TELEGRAM_INCLUDE_BROKER_APP_SCHEMES=1 이면 전 증권사 스킴 포함
+ *   - []: 네이버·토스만 (앱 스킴 없음)
+ *   - 1~3개 id: 해당 증권사만
  */
 export function buildSubscriptionQuickLinksHtml(
   etfCode: string,
   locale: Locale = "ko",
-  includeAppSchemes = process.env.TELEGRAM_INCLUDE_BROKER_APP_SCHEMES === "1",
+  selectedBrokerIds: string[] | null = null,
 ): string {
   const code = normalizeSixDigitCode(etfCode)
   if (!code) {
@@ -64,19 +111,42 @@ export function buildSubscriptionQuickLinksHtml(
     locale === "en"
       ? "📱 App deep links (behavior varies by app/version)"
       : "📱 앱 딥링크(앱·버전마다 다를 수 있음)"
+
   const lines: string[] = [
     "",
     quickTitle,
     `<a href="${naver}">${naverLabel}</a> · <a href="${toss}">${tossLabel}</a>`,
   ]
-  if (includeAppSchemes) {
-    lines.push(
-      "",
-      schemeNote,
-    )
-    for (const { label, build } of OPTIONAL_APP_SCHEMES) {
-      lines.push(`${label}: ${build(code)}`)
+
+  let includeSchemes = false
+  let schemesToShow: BrokerDeepLinkOptionType[] = []
+
+  if (selectedBrokerIds === null) {
+    includeSchemes = process.env.TELEGRAM_INCLUDE_BROKER_APP_SCHEMES === "1"
+    if (includeSchemes) {
+      schemesToShow = [...BROKER_DEEP_LINK_OPTIONS]
+    }
+  } else {
+    const allowed = new Set(BROKER_DEEP_LINK_IDS)
+    const picked = [...new Set(selectedBrokerIds)]
+      .filter((id) => allowed.has(id))
+      .slice(0, 3)
+    if (picked.length > 0) {
+      includeSchemes = true
+      schemesToShow = picked
+        .map((id) => getBrokerOptionById(id))
+        .filter((x): x is BrokerDeepLinkOptionType => x != null)
     }
   }
+
+  if (includeSchemes && schemesToShow.length > 0) {
+    lines.push("", schemeNote)
+    const label = (o: BrokerDeepLinkOptionType) =>
+      locale === "en" ? o.labelEn : o.labelKo
+    for (const o of schemesToShow) {
+      lines.push(`${label(o)}: ${o.build(code)}`)
+    }
+  }
+
   return lines.join("\n")
 }

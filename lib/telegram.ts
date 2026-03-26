@@ -62,7 +62,7 @@ export async function getBotUsername(): Promise<string | null> {
  */
 export async function sendTelegramMessage(
   options: SendMessageOptionsType,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; messageId?: number }> {
   const token = getBotToken()
   if (!token) {
     return { ok: false, error: "TELEGRAM_BOT_TOKEN not set" }
@@ -75,11 +75,15 @@ export async function sendTelegramMessage(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(options),
     })
-    const data = (await res.json()) as { ok: boolean; description?: string }
+    const data = (await res.json()) as {
+      ok: boolean
+      description?: string
+      result?: { message_id?: number }
+    }
     if (!data.ok) {
       return { ok: false, error: data.description ?? "Unknown error" }
     }
-    return { ok: true }
+    return { ok: true, messageId: data.result?.message_id }
   } catch (e) {
     const err = e instanceof Error ? e.message : String(e)
     return { ok: false, error: err }
@@ -144,13 +148,51 @@ export async function sendMessageWithKeyboard(
   text: string,
   buttons: InlineKeyboardButtonType[][],
   parseMode: "HTML" | "Markdown" | "MarkdownV2" = "HTML",
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; messageId?: number }> {
   return sendTelegramMessage({
     chat_id: chatId,
     text,
     parse_mode: parseMode,
     reply_markup: { inline_keyboard: buttons },
   })
+}
+
+/**
+ * 인라인 키보드 메시지 본문·버튼 수정 (다중 선택 토글용)
+ */
+export async function editMessageTextWithKeyboard(
+  chatId: number,
+  messageId: number,
+  text: string,
+  buttons: InlineKeyboardButtonType[][],
+  parseMode: "HTML" | "Markdown" | "MarkdownV2" = "HTML",
+): Promise<{ ok: boolean; error?: string }> {
+  const token = getBotToken()
+  if (!token) {
+    return { ok: false, error: "TELEGRAM_BOT_TOKEN not set" }
+  }
+  const url = `${TELEGRAM_API_BASE}/bot${token}/editMessageText`
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: parseMode,
+        reply_markup: { inline_keyboard: buttons },
+      }),
+    })
+    const data = (await res.json()) as { ok: boolean; description?: string }
+    if (!data.ok) {
+      return { ok: false, error: data.description ?? "Unknown error" }
+    }
+    return { ok: true }
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e)
+    return { ok: false, error: err }
+  }
 }
 
 /**

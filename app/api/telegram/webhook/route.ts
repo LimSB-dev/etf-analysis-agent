@@ -15,10 +15,24 @@ import { ETFS } from "@/lib/constants/etfs"
 import { ETF_OPTIONS } from "@/lib/etf-options"
 import { db } from "@/lib/db"
 import { userPreferences, telegramLinkTokens, users } from "@/lib/db/schema"
+import { BROKER_DEEP_LINK_IDS } from "@/lib/broker-deep-links"
+import {
+  clearPendingBrokerSel,
+  getBrokerLinkPrefs,
+  getPendingBrokerSel,
+  setBrokerLinkPrefs,
+  setPendingBrokerSel,
+} from "@/lib/broker-link-prefs"
 import { isValidLocale } from "@/lib/i18n/config"
 import { addSubscription } from "@/lib/subscriptions"
 import {
+  brokerPromptHtml,
+  buildBrokerPickKeyboard,
+  toggleBrokerSelection,
+} from "@/lib/telegram-broker-prompt"
+import {
   answerCallbackQuery,
+  editMessageTextWithKeyboard,
   sendMessageWithKeyboard,
   sendText,
   type InlineKeyboardButtonType,
@@ -43,7 +57,7 @@ interface TelegramUpdateType {
   }
   callback_query?: {
     id: string
-    message?: { chat: { id: number } }
+    message?: { chat: { id: number }; message_id?: number }
     data?: string
   }
 }
@@ -58,6 +72,20 @@ async function getDbLocaleForTelegramChat(
     .limit(1)
   const l = rows[0]?.locale
   return l && isValidLocale(l) ? l : undefined
+}
+
+async function sendBrokerPickerPrompt(chatId: number): Promise<void> {
+  const locRaw = await getDbLocaleForTelegramChat(chatId)
+  const loc = locRaw === "en" ? "en" : "ko"
+  const existing = await getBrokerLinkPrefs(chatId)
+  const initial = existing ?? []
+  await setPendingBrokerSel(chatId, initial)
+  await sendMessageWithKeyboard(
+    chatId,
+    brokerPromptHtml(initial, loc),
+    buildBrokerPickKeyboard(initial, loc),
+    "HTML",
+  )
 }
 
 async function getDbLocaleForUserId(
@@ -197,6 +225,9 @@ export async function POST(request: NextRequest) {
             ? `✅ 연결되었습니다.\n\n관심 리스트 ${synced}개 ETF에 대해 매수·매도 기준대로 알림을 보내드립니다.\n매일 평일 15:00(KST)에 조건을 확인해, 장 마감(15:30) 전에 알림을 보내드립니다.`
             : "✅ 연결되었습니다.\n관심 리스트에 ETF를 추가한 뒤 마이페이지에서 매수·매도 기준을 설정하고 저장하면, 해당 설정대로 알림을 보내드립니다."
         const sent = await sendText(chatId, welcomeMsg)
+        if (sent.ok) {
+          await sendBrokerPickerPrompt(chatId)
+        }
         return NextResponse.json({ ok: sent.ok })
       }
     }
@@ -217,6 +248,67 @@ export async function POST(request: NextRequest) {
   }
   if (callbackQueryId) {
     await answerCallbackQuery(callbackQueryId)
+  }
+
+  // 증권사 딥링크 0~3개 다중 선택
+  if (data.startsWith("brk:")) {
+    const msgId = update.callback_query?.message?.message_id
+    if (msgId == null) {
+      return NextResponse.json({ ok: true })
+    }
+    const locRaw = await getDbLocaleForTelegramChat(chatId)
+    const loc = locRaw === "en" ? "en" : "ko"
+
+    if (data === "brk:done") {
+      let sel = await getPendingBrokerSel(chatId)
+      if (sel == null) {
+        sel = (await getBrokerLinkPrefs(chatId)) ?? []
+      }
+      await setBrokerLinkPrefs(chatId, sel)
+      await clearPendingBrokerSel(chatId)
+      await sendText(
+        chatId,
+        loc === "en"
+          ? "✅ Saved. Your selected broker deep links will appear in alerts."
+          : "✅ 저장했습니다. 알림에 선택한 증권사 딥링크가 포함됩니다.",
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    if (data === "brk:skip") {
+      await setBrokerLinkPrefs(chatId, [])
+      await clearPendingBrokerSel(chatId)
+      await sendText(
+        chatId,
+        loc === "en"
+          ? "✅ Saved. Alerts will only include Naver and Toss links."
+          : "✅ 저장했습니다. 네이버·토스 링크만 알림에 포함됩니다.",
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    if (data.startsWith("brk:t:")) {
+      const id = data.slice(6)
+      if (!BROKER_DEEP_LINK_IDS.includes(id)) {
+        return NextResponse.json({ ok: true })
+      }
+      let sel = await getPendingBrokerSel(chatId)
+      if (sel == null) {
+        sel = (await getBrokerLinkPrefs(chatId)) ?? []
+      }
+      const next = toggleBrokerSelection(sel, id)
+      await setPendingBrokerSel(chatId, next)
+      await editMessageTextWithKeyboard(
+        chatId,
+        msgId,
+        brokerPromptHtml(next, loc),
+        buildBrokerPickKeyboard(next, loc),
+        "HTML",
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    return NextResponse.json({ ok: true })
   }
 
   // ETF 선택: etf:{ticker}
@@ -308,14 +400,17 @@ export async function POST(request: NextRequest) {
       sellThreshold != null
         ? `매수: ${buyThreshold}% 이하 / 매도: +${sellThreshold}% 이상`
         : `매수: ${buyThreshold}% 이하`
-    await sendText(
+    const done = await sendText(
       chatId,
       `✅ 구독이 완료되었습니다.\n\n` +
         `ETF: ${etf.name}\n` +
         `${sellText}\n\n` +
         `매일 평일 15:00에 조건을 확인해, 장 마감(15:30) 전에 알림을 보냅니다.`,
     )
-    return NextResponse.json({ ok: true })
+    if (done.ok) {
+      await sendBrokerPickerPrompt(chatId)
+    }
+    return NextResponse.json({ ok: done.ok })
   }
 
   return NextResponse.json({ ok: true })

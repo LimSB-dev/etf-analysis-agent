@@ -17,6 +17,7 @@ import {
   buildSubscriptionQuickLinksHtml,
   escapeHtml,
 } from "@/lib/broker-deep-links"
+import { getBrokerLinkPrefs } from "@/lib/broker-link-prefs"
 import { listSubscriptions } from "@/lib/subscriptions"
 import { sendToChannel, sendText } from "@/lib/telegram"
 import {
@@ -144,6 +145,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const brokerPrefsByChat = new Map<number, string[] | null>()
+  for (const cid of uniqueChatIds) {
+    brokerPrefsByChat.set(cid, await getBrokerLinkPrefs(cid))
+  }
+
   for (const sub of subscriptions) {
     const etf = etfByTicker.get(sub.etf_ticker)
     if (!etf) {
@@ -170,7 +176,11 @@ export async function GET(request: NextRequest) {
     const line =
       `${escapeHtml(etf.name)}\n` +
       `${getTelegramPricePremiumLine(etf.price, premStr, locale)} ${signal}` +
-      buildSubscriptionQuickLinksHtml(etf.ticker, locale)
+      buildSubscriptionQuickLinksHtml(
+        etf.ticker,
+        locale,
+        brokerPrefsByChat.get(sub.chat_id) ?? null,
+      )
     const res = await sendText(sub.chat_id, line, {
       parseMode: "HTML",
       disableWebPagePreview: true,
@@ -199,6 +209,7 @@ export async function GET(request: NextRequest) {
     }
     const locale = resolveTelegramLocale(row.locale)
     const kstTimeStr = formatTelegramKstTime(calculatedAt, locale)
+    const brokerPrefsDigest = await getBrokerLinkPrefs(chatId)
     const prefs = row.preferences ?? {}
     const digestLines: string[] = [getTelegramDigestHeader(kstTimeStr, locale), ""]
     for (const [etfId, p] of Object.entries(prefs)) {
@@ -218,7 +229,11 @@ export async function GET(request: NextRequest) {
       digestLines.push(
         `${escapeHtml(etf.name)}\n` +
           `${getTelegramPricePremiumLine(etf.price, premStr, locale)} ${signal}` +
-          buildSubscriptionQuickLinksHtml(etf.ticker, locale),
+          buildSubscriptionQuickLinksHtml(
+            etf.ticker,
+            locale,
+            brokerPrefsDigest,
+          ),
       )
       digestLines.push("")
     }
