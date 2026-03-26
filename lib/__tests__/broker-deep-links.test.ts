@@ -40,7 +40,8 @@ describe("lib/broker-deep-links", () => {
 
     expect(html).toContain("🔗 빠른 이동");
     expect(html).toContain("네이버 시세");
-    expect(html).toContain("https://m.stock.naver.com/domestic/stock/123456/total");
+    expect(html).toContain("naversearchapp://stock/123456");
+    expect(html).toContain("tossinvest://stocks/A123456/order");
     // MAX_QUICK_LINK_SELECTIONS = 5이므로 삼성/한국투자는 포함되면 안 됨
     expect(html).not.toContain("삼성");
     expect(html).not.toContain("한국투자");
