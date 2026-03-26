@@ -329,6 +329,12 @@ export async function POST(request: NextRequest) {
             ? `✅ 연결되었습니다.\n\n관심 리스트 ${synced}개 ETF에 대해 매수·매도 기준대로 알림을 보내드립니다.\n매일 평일 15:00(KST)에 조건을 확인해, 장 마감(15:30) 전에 알림을 보내드립니다.`
             : "✅ 연결되었습니다.\n관심 리스트에 ETF를 추가한 뒤 마이페이지에서 매수·매도 기준을 설정하고 저장하면, 해당 설정대로 알림을 보내드립니다."
         const sent = await sendPlainHeaderWithBrokerKeyboard(chatId, welcomeMsg)
+        if (!sent.ok) {
+          console.error("[telegram:webhook] /start <token> send failed", {
+            chatId,
+            error: sent.error ?? "unknown",
+          })
+        }
         return NextResponse.json({ ok: sent.ok })
       }
     }
@@ -338,6 +344,12 @@ export async function POST(request: NextRequest) {
       "알림 받을 ETF를 선택하세요.\n\n💡 /help — 전체 기능 안내 · /premium — 지금 괴리율",
       buildEtfKeyboard(),
     )
+    if (!sent.ok) {
+      console.error("[telegram:webhook] /start send failed", {
+        chatId,
+        error: sent.error ?? "unknown",
+      })
+    }
     return NextResponse.json({ ok: sent.ok })
   }
 
@@ -425,6 +437,13 @@ export async function POST(request: NextRequest) {
       "괴리율이 선택한 값 이하로 내려가면 매수 알림을 보냅니다.\n프리미엄 기준을 선택하세요.",
       buildThresholdKeyboard(etf.ticker),
     )
+    if (!sent.ok) {
+      console.error("[telegram:webhook] etf pick send failed", {
+        chatId,
+        error: sent.error ?? "unknown",
+        ticker,
+      })
+    }
     return NextResponse.json({ ok: sent.ok })
   }
 
@@ -452,7 +471,16 @@ export async function POST(request: NextRequest) {
       ...(localeFromDb ? { locale: localeFromDb } : {}),
     })
     if (!added) {
-      await sendText(chatId, "구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.")
+      const r = await sendText(
+        chatId,
+        "구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+      )
+      if (!r.ok) {
+        console.error("[telegram:webhook] thresh add failed + notify failed", {
+          chatId,
+          error: r.error ?? "unknown",
+        })
+      }
       return NextResponse.json({ ok: true })
     }
 
@@ -461,6 +489,12 @@ export async function POST(request: NextRequest) {
       "괴리율이 선택한 값 이상으로 올라가면 매도 알림을 보냅니다.\n매도 알림도 받으시겠어요?",
       buildSellThresholdKeyboard(threshold, etf.ticker),
     )
+    if (!sent.ok) {
+      console.error("[telegram:webhook] sell keyboard send failed", {
+        chatId,
+        error: sent.error ?? "unknown",
+      })
+    }
     return NextResponse.json({ ok: sent.ok })
   }
 
@@ -493,7 +527,16 @@ export async function POST(request: NextRequest) {
       ...(localeFromDb ? { locale: localeFromDb } : {}),
     })
     if (!added) {
-      await sendText(chatId, "구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.")
+      const r = await sendText(
+        chatId,
+        "구독 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+      )
+      if (!r.ok) {
+        console.error("[telegram:webhook] sell add failed + notify failed", {
+          chatId,
+          error: r.error ?? "unknown",
+        })
+      }
       return NextResponse.json({ ok: true })
     }
 
@@ -506,6 +549,12 @@ export async function POST(request: NextRequest) {
       etf.name,
       sellText,
     )
+    if (!done.ok) {
+      console.error("[telegram:webhook] complete message send failed", {
+        chatId,
+        error: done.error ?? "unknown",
+      })
+    }
     return NextResponse.json({ ok: done.ok })
   }
 
