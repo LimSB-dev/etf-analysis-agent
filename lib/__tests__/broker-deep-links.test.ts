@@ -57,9 +57,8 @@ describe("lib/broker-deep-links", () => {
     const html = buildSubscriptionQuickLinksHtml("123456", "ko", null);
 
     expect(html).toContain("🔗 빠른 이동");
-    expect(html).toContain("📱 앱 딥링크");
-    // app scheme의 일부가 문자열로 포함된다
-    expect(html).toContain("miraeassetTrade://?code=123456");
+    // 앱 딥링크도 "증권사 이름에 링크" 형태로 포함된다
+    expect(html).toContain("<a href=\"miraeassetTrade://?code=123456\">미래에셋</a>");
   });
 
   test("locale이 en이면 제목이 영어로 바뀐다", () => {
