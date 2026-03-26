@@ -124,8 +124,8 @@ export async function buildTelegramSubscribedPremiumSnapshotHtml(
       ok: false,
       message:
         locale === "en"
-          ? "No subscriptions yet. Run /subscribe to add one."
-          : "아직 구독한 ETF가 없습니다. /subscribe 로 구독을 추가해 주세요.",
+          ? "No ETFs to show yet. Add some in My page (website) or run /subscribe. If My page has ETFs, link Telegram from My page first."
+          : "표시할 관심 ETF가 없습니다. 웹 마이페이지에서 추가하거나 /subscribe 로 구독하세요. 마이페이지에만 있다면 텔레그램 연동 후 다시 /my 를 눌러 보세요.",
     }
   }
 
