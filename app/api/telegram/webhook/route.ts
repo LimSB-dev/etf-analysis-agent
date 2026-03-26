@@ -3,7 +3,8 @@
  * - /start: 알림 받을 ETF 선택 Inline Keyboard 전송
  * - /start <token>: 마이페이지에서 발급한 토큰으로 관심 리스트 구독 동기화 후 환영 메시지
  * - ETF 선택 시: 프리미엄 기준 선택 Keyboard 전송
- * - 프리미엄 선택 시: 구독 저장 후 완료 메시지
+ * - 프리미엄 선택 시: 구독 저장 후 완료 메시지 + 같은 메시지에 증권사 딥링크 선택 키보드
+ * - /brokers (또는 /증권사): 증권사 선택 화면만 다시 표시
  *
  * Vercel 배포 후 Telegram에 Webhook URL 설정 필요:
  * https://api.telegram.org/bot<TOKEN>/setWebhook?url=<YOUR_VERCEL_URL>/api/telegram/webhook
@@ -15,7 +16,7 @@ import { ETFS } from "@/lib/constants/etfs"
 import { ETF_OPTIONS } from "@/lib/etf-options"
 import { db } from "@/lib/db"
 import { userPreferences, telegramLinkTokens, users } from "@/lib/db/schema"
-import { BROKER_DEEP_LINK_IDS } from "@/lib/broker-deep-links"
+import { BROKER_DEEP_LINK_IDS, escapeHtml } from "@/lib/broker-deep-links"
 import {
   clearPendingBrokerSel,
   getBrokerLinkPrefs,
@@ -83,6 +84,58 @@ async function sendBrokerPickerPrompt(chatId: number): Promise<void> {
   await sendMessageWithKeyboard(
     chatId,
     brokerPromptHtml(initial, loc),
+    buildBrokerPickKeyboard(initial, loc),
+    "HTML",
+  )
+}
+
+/** 환영/완료 본문 아래에 증권사 키보드를 붙여 한 통에 표시 (두 번째 메시지 누락 방지) */
+async function sendPlainHeaderWithBrokerKeyboard(
+  chatId: number,
+  headerPlain: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const locRaw = await getDbLocaleForTelegramChat(chatId)
+  const loc = locRaw === "en" ? "en" : "ko"
+  const existing = await getBrokerLinkPrefs(chatId)
+  const initial = existing ?? []
+  await setPendingBrokerSel(chatId, initial)
+  const html =
+    `${escapeHtml(headerPlain)}\n\n—\n\n${brokerPromptHtml(initial, loc)}`
+  return sendMessageWithKeyboard(
+    chatId,
+    html,
+    buildBrokerPickKeyboard(initial, loc),
+    "HTML",
+  )
+}
+
+async function sendSubscriptionCompleteWithBrokerKeyboard(
+  chatId: number,
+  etfName: string,
+  sellTextPlain: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const locRaw = await getDbLocaleForTelegramChat(chatId)
+  const loc = locRaw === "en" ? "en" : "ko"
+  const existing = await getBrokerLinkPrefs(chatId)
+  const initial = existing ?? []
+  await setPendingBrokerSel(chatId, initial)
+  const scheduleKo =
+    "매일 평일 15:00에 조건을 확인해, 장 마감(15:30) 전에 알림을 보냅니다."
+  const scheduleEn =
+    "We check on weekdays at 15:00 KST and send alerts before the close (15:30)."
+  const schedule = loc === "en" ? scheduleEn : scheduleKo
+  const doneTitle =
+    loc === "en" ? "✅ Subscription complete" : "✅ 구독이 완료되었습니다"
+  const html =
+    `${doneTitle}\n\n` +
+    `<b>ETF:</b> ${escapeHtml(etfName)}\n` +
+    `${escapeHtml(sellTextPlain)}\n\n` +
+    `${schedule}\n\n` +
+    `—\n\n` +
+    brokerPromptHtml(initial, loc)
+  return sendMessageWithKeyboard(
+    chatId,
+    html,
     buildBrokerPickKeyboard(initial, loc),
     "HTML",
   )
@@ -159,6 +212,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 400 })
   }
 
+  const plainMessageText = update.message?.text?.trim() ?? ""
+  if (
+    update.message &&
+    !update.callback_query &&
+    (plainMessageText === "/brokers" ||
+      plainMessageText === "/증권사" ||
+      plainMessageText === "/broker")
+  ) {
+    await sendBrokerPickerPrompt(chatId)
+    return NextResponse.json({ ok: true })
+  }
+
   // /start 또는 /start <token> (개인 채팅만; 채널 포스트는 토큰 없음)
   const startText =
     update.message?.text?.trim() ?? update.channel_post?.text?.trim() ?? ""
@@ -224,10 +289,7 @@ export async function POST(request: NextRequest) {
           synced > 0
             ? `✅ 연결되었습니다.\n\n관심 리스트 ${synced}개 ETF에 대해 매수·매도 기준대로 알림을 보내드립니다.\n매일 평일 15:00(KST)에 조건을 확인해, 장 마감(15:30) 전에 알림을 보내드립니다.`
             : "✅ 연결되었습니다.\n관심 리스트에 ETF를 추가한 뒤 마이페이지에서 매수·매도 기준을 설정하고 저장하면, 해당 설정대로 알림을 보내드립니다."
-        const sent = await sendText(chatId, welcomeMsg)
-        if (sent.ok) {
-          await sendBrokerPickerPrompt(chatId)
-        }
+        const sent = await sendPlainHeaderWithBrokerKeyboard(chatId, welcomeMsg)
         return NextResponse.json({ ok: sent.ok })
       }
     }
@@ -400,16 +462,11 @@ export async function POST(request: NextRequest) {
       sellThreshold != null
         ? `매수: ${buyThreshold}% 이하 / 매도: +${sellThreshold}% 이상`
         : `매수: ${buyThreshold}% 이하`
-    const done = await sendText(
+    const done = await sendSubscriptionCompleteWithBrokerKeyboard(
       chatId,
-      `✅ 구독이 완료되었습니다.\n\n` +
-        `ETF: ${etf.name}\n` +
-        `${sellText}\n\n` +
-        `매일 평일 15:00에 조건을 확인해, 장 마감(15:30) 전에 알림을 보냅니다.`,
+      etf.name,
+      sellText,
     )
-    if (done.ok) {
-      await sendBrokerPickerPrompt(chatId)
-    }
     return NextResponse.json({ ok: done.ok })
   }
 
